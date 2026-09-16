@@ -1,5 +1,8 @@
 #!/bin/bash
 
 argenctl context switch general
-exec mpv --geometry=100% "$@"
+exec mpv \
+    --geometry=100% \
+    --script-opts=ytdl_hook-ytdl_path=/usr/bin/yt-dlp \
+    "$@"
 

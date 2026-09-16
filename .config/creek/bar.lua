@@ -1,7 +1,7 @@
 #!/usr/bin/env luajit
 
 local home = os.getenv("HOME")
-package.path = package.path .. ";" .. home .. "/.config/creek/?.lua"
+package.path = package.path .. ";" .. home .. "/.config/creek/?"
 local helper = require("helpers")
 os.setlocale("", "time")
 
@@ -184,7 +184,7 @@ while true do
     local vol_info = helper.command_line("wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null")
     local volume_str = ""
     if vol_info and vol_info:match("MUTED") then
-        volume_str = string.format("󰝟 %3d%%", 0)
+        volume_str = string.format("󰝟 %3d %%", 0)
     elseif vol_info then
         local vol_float = tonumber(vol_info:match("%d+%.%d+"))
         if vol_float then
@@ -203,7 +203,7 @@ while true do
         return value or ""
     end 
 
-    local SPACER = "               "
+    local SPACER = "                "
 
     local final_output = string.format( "%s %s %s %s %s %s %s %s %s %s %s %s %s\n", 
         nz(contexts_line), 
