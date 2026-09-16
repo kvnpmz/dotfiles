@@ -1,0 +1,26 @@
+#!/bin/sh
+
+LABEL="Storage"
+MOUNTPOINT="/run/media/$USER/$LABEL"
+
+DEVICE=$(lsblk -rno PATH,LABEL | awk -v label="$LABEL" '$2 == label {print $1}')
+
+if [ -z "$DEVICE" ]; then
+    echo "Storage not found."
+    exit 1
+fi
+
+if [ "$(printf '%s\n' "$DEVICE" | wc -l)" -ne 1 ]; then
+    echo "Multiple devices with label '$LABEL' found:"
+    printf '%s\n' "$DEVICE"
+    exit 1
+fi
+
+if mountpoint -q "$MOUNTPOINT"; then
+    echo "Unmounting $MOUNTPOINT"
+    sudo umount "$MOUNTPOINT"
+else
+    echo "Mounting $DEVICE → $MOUNTPOINT"
+    sudo mkdir -p "$MOUNTPOINT"
+    sudo mount "$DEVICE" "$MOUNTPOINT"
+fi

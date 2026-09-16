@@ -1,0 +1,22 @@
+#!/bin/sh
+
+argenctl context switch general
+
+if [ "$(docker ps -aq -f name=jdownloader-2)" ]; then
+    docker start jdownloader-2
+else
+    docker run -d \
+      --name=jdownloader-2 \
+      -v "$HOME/jdownloader2/docker-config":/config:rw \
+      -v "$HOME/Downloads":/output:rw \
+      -e DISPLAY_WIDTH=1024 \
+      -e DISPLAY_HEIGHT=576 \
+      -p 5800:5800 \
+      --restart unless-stopped \
+      jlesage/jdownloader-2
+fi
+
+sleep 4
+
+chromium --app=http://localhost:5800/ >/dev/null 2>&1 &
+

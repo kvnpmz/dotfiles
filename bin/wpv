@@ -1,0 +1,186 @@
+#!/bin/bash
+
+argenctl context switch general
+argenctl layout switch 2x2
+
+WPV_PGID="$(ps -o pgid= -p "$$" | tr -d ' ')"
+
+PANES="${PANES:-3}"
+TRANSPOSE="${TRANSPOSE:-2}"
+
+LEFT=
+CENTER=
+RIGHT=
+FOURTH=
+SOURCE_COUNT=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -p|--panes)
+            [ $# -ge 2 ] || {
+                echo "Error: $1 requires a value" >&2
+                            exit 1
+            }
+        PANES="$2"
+        shift 2
+        ;;
+
+    -t|--transpose)
+        [ $# -ge 2 ] || {
+            echo "Error: $1 requires a value" >&2
+                    exit 1
+        }
+    TRANSPOSE="$2"
+    shift 2
+    ;;
+
+--)
+    shift
+    while [ $# -gt 0 ]; do
+        SOURCE_COUNT=$((SOURCE_COUNT + 1))
+        case "$SOURCE_COUNT" in
+            1) LEFT="$1" ;;
+            2) CENTER="$1" ;;
+            3) RIGHT="$1" ;;
+            4) FOURTH="$1" ;;
+            *)
+                echo "Error: maximum 4 sources" >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+    ;;
+
+*)
+    SOURCE_COUNT=$((SOURCE_COUNT + 1))
+    case "$SOURCE_COUNT" in
+        1) LEFT="$1" ;;
+        2) CENTER="$1" ;;
+        3) RIGHT="$1" ;;
+        4) FOURTH="$1" ;;
+        *)
+            echo "Error: maximum 4 sources" >&2
+            exit 1
+            ;;
+    esac
+    shift
+    ;;
+esac
+done
+
+case "$PANES" in
+    3|4)
+        ;;
+    *)
+        echo "Error: panes must be 3 or 4 (got: $PANES)" >&2
+        exit 1
+        ;;
+esac
+
+case "$TRANSPOSE" in
+    1|2)
+        ;;
+    *)
+        echo "Error: transpose must be 1 or 2 (got: $TRANSPOSE)" >&2
+        exit 1
+        ;;
+esac
+
+LEFT="${LEFT:-.}"
+CENTER="${CENTER:-$LEFT}"
+RIGHT="${RIGHT:-$LEFT}"
+FOURTH="${FOURTH:-$LEFT}"
+
+if [ "$PANES" -eq 3 ] && [ "$SOURCE_COUNT" -gt 3 ]; then
+    echo "Error: maximum 3 sources" >&2
+    exit 1
+fi
+
+run_source() {
+    title="$1"
+    source="$2"
+
+    case "$source" in
+        https://*)
+            qbg mpv \
+                --title="$title" \
+                --loop-file=inf \
+                --video-zoom=0.25 \
+                --script="$HOME/.config/mpv/manual_scripts/rotate_auto.lua" \
+                --script-opts="rotate_auto-transpose=$TRANSPOSE" \
+                "$source"
+            ;;
+
+        img:*)
+            source="${source#img:}"
+
+            if [ -d "$source" ]; then
+                imix \
+                    --title "$title" \
+                    -d "$source" \
+                    --transpose "$TRANSPOSE"
+            else
+                echo "Error: image directory does not exist: $source" >&2
+                exit 1
+            fi
+            ;;
+
+        mix:*)
+            source="${source#mix:}"
+
+            mix \
+                --title "$title" \
+                -d "$source" \
+                --transpose "$TRANSPOSE"
+            ;;
+
+        *)
+            if [ -d "$source" ]; then
+                vmix \
+                    --title "$title" \
+                    -d "$source" \
+                    --transpose "$TRANSPOSE"
+            else
+                echo "Error: source must be a directory or https:// URL: $source" >&2
+                exit 1
+            fi
+            ;;
+    esac
+}
+
+cleanup() {
+    trap - INT TERM EXIT
+
+    kill -TERM -- "-$WPV_PGID" 2>/dev/null
+
+    sleep 1
+
+    kill -KILL -- "-$WPV_PGID" 2>/dev/null
+
+    exit 0
+}
+
+revert_layout() {
+    argenctl context switch general
+    argenctl layout switch stacktile
+    argenctl context switch terminal
+    cleanup
+}
+
+trap revert_layout INT
+trap cleanup TERM EXIT
+
+run_source wpv-left "$LEFT" &
+sleep 0.05
+run_source wpv-center "$CENTER" &
+sleep 0.05
+run_source wpv-right "$RIGHT" &
+sleep 0.05
+
+if [ "$PANES" -eq 4 ]; then
+    run_source wpv-fourth "$FOURTH" &
+fi
+
+wait
+

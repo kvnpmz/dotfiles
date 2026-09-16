@@ -1,0 +1,3 @@
+#!/bin/sh
+
+/home/kevin/bin/screen_rotate.lua right

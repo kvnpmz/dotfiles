@@ -1,0 +1,4 @@
+/run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=158.17
+/run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=12.30
+/run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=15.41
+/run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=16.04

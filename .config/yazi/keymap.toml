@@ -1,0 +1,8 @@
+[[mgr.prepend_keymap]]
+on   = [ "<C-t>" ]
+run  = "plugin thumbnail"
+desc = "Open current directory in Swayimg gallery"
+[[mgr.prepend_keymap]]
+on = ["u", "r"]
+run = 'shell --block -- "$HOME/bin/trash-restore" %s'
+desc = "Restore from trash"

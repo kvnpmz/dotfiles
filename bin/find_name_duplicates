@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+folder="/run/media/kevin/Storage/files/music/private/lewisandlucy/videos"
+output="$HOME/name_duplicates"
+
+mkdir -p "$output"
+
+declare -A groups
+
+# Build groups based on the first 15 characters of the filename
+while IFS= read -r -d '' file; do
+    name=$(basename "$file")
+    prefix="${name:0:15}"
+    groups["$prefix"]+=$'\n'"$file"
+done < <(find "$folder" -maxdepth 1 -type f -print0)
+
+group_num=0
+
+for prefix in "${!groups[@]}"; do
+    # Get the files in this group
+    mapfile -t files < <(printf '%s\n' "${groups[$prefix]}" | sed '/^$/d')
+
+    # Only process actual duplicate groups
+    if (( ${#files[@]} > 1 )); then
+        ((group_num++))
+
+        dup_dir="$output/duplicate_$(printf '%03d' "$group_num")"
+        mkdir -p "$dup_dir"
+
+        echo
+        echo "Duplicate group $group_num"
+        echo "First 15 characters: $prefix"
+        echo "Moving ${#files[@]} files to:"
+        echo "  $dup_dir"
+
+        for file in "${files[@]}"; do
+            echo "  $(basename "$file")"
+            mv -- "$file" "$dup_dir/"
+        done
+    fi
+done
+
+echo
+if (( group_num == 0 )); then
+    echo "No duplicate filenames found."
+else
+    echo "Found $group_num duplicate groups."
+    echo "Files were moved to:"
+    echo "  $output"
+fi

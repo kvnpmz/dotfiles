@@ -1,0 +1,8 @@
+#!/bin/sh
+
+case "$(cat "$HOME/.keyboard_layout" 2>/dev/null)" in
+    us) printf '  EN\n' ;;
+    gr) printf '  ΕΛ\n' ;;
+    il) printf '  עב\n' ;;
+    *)  printf '  ??\n' ;;
+esac

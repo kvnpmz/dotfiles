@@ -1,0 +1,16 @@
+#!/bin/sh
+
+case "$1" in
+    󰐥)
+        /home/kevin/bin/power_menu &
+        ;;
+    F|A|B)
+        /home/kevin/bin/timezone_change &
+        ;;
+    󰕾|󰖀|󰕿|󰖁|󰝟)
+        wpctl set-mute @DEFAULT_SINK@ toggle &
+        ;;
+    󰯄|󱎘)
+        /home/kevin/bin/vpn &
+        ;;
+esac

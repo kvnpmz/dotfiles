@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+if [ -z "$1" ]; then
+    echo "Usage: edit {name}"
+    exit 1
+fi
+
+name="$1"
+
+if [ -f "templates/$name/render.tl" ]; then
+    file="render.tl"
+elif [ -f "templates/$name/render.cs" ]; then
+    file="render.cs"
+else
+    echo "No render.tl or render.cs found"
+    exit 1
+fi
+
+vi "templates/$name/$file" "templates/$name/style.css" 

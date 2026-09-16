@@ -1,0 +1,15 @@
+#!/bin/sh
+
+USER_NAME="kevin"
+USER_UID=$(id -u "$USER_NAME")
+RUNTIME_DIR="/run/user/$USER_UID"
+
+# Give the compositor a moment to restore the socket after wake
+sleep 5
+
+# Dynamically find the active wayland socket
+WAYLAND_SOCK=$(basename "$(ls -d "$RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1)")
+
+if [ -n "$WAYLAND_SOCK" ]; then
+    su - "$USER_NAME" -c "export XDG_RUNTIME_DIR=$RUNTIME_DIR; export WAYLAND_DISPLAY=$WAYLAND_SOCK; /home/kevin/.local/bin/kwim -c /home/kevin/.config/kwim/config.zon" >> /tmp/kwim-resume.log 2>&1
+fi

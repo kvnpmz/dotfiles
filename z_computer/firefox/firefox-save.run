@@ -1,0 +1,10 @@
+#!/bin/sh
+save() {
+    /usr/local/bin/firefox-ram-save
+}
+trap save TERM INT EXIT
+while true; do
+    sleep 900 &
+    wait $!
+    save
+done

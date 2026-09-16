@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+set -u
+
+APP="$HOME/z_ob/etsy/TemplatePrintable"
+ENV="$APP/env.sh"
+BIN="$HOME/z_ob/etsy/tools/tpr/TemplatePrintable"
+
+if [[ ! -f "$ENV" ]]; then
+    echo "tpr: missing environment file: $ENV" >&2
+    exit 1
+fi
+
+if [[ ! -x "$BIN" ]]; then
+    echo "tpr: missing executable: $BIN" >&2
+    exit 1
+fi
+
+cd "$APP" || exit 1
+
+source "$ENV"
+
+while true; do
+    "$BIN" "$@"
+    status=$?
+
+    if [[ $status -eq 0 || $status -eq 130 ]]; then
+        exit "$status"
+    fi
+
+    sleep 1
+done

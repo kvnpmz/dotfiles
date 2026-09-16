@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+cities=(
+    "NY|America/New_York"
+    "Chicago|America/Chicago"
+    "Buenos Aires|America/Argentina/Buenos_Aires"
+)
+
+state_file="/tmp/worldclock_state"
+
+if [ -f "$state_file" ]; then
+    index=$(cat "$state_file")
+else
+    index=0
+fi
+
+# Increment index and loop back
+next_index=$(( (index + 1) % ${#cities[@]} ))
+echo "$next_index" > "$state_file"
+

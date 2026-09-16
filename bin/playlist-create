@@ -1,0 +1,8 @@
+#!/bin/bash
+
+find /media/kevin/Storage/library/music -type f \( \
+    -iname "*.mp3" -o \
+    -iname "*.flac" -o \
+    -iname "*.ogg" -o \
+    -iname "*.m4a" \
+\) | mpv --shuffle --playlist=- 

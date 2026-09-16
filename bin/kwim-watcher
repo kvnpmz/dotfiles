@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ -z "$KWIM_WATCHER_RUNNING" ]; then
+    export KWIM_WATCHER_RUNNING=1
+    udevadm monitor --subsystem-match=input --udev --property | while read -r line; do
+        if echo "$line" | grep -q "ACTION=add"; then
+            sleep 0.5
+            /home/kevin/src/kwim/zig-out/bin/kwim -c /home/kevin/.config/kwim/config.zon
+        fi
+    done &
+fi

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+if [[ $# -eq 1 ]] && [[ -f "$1" ]]; then
+    exec head -n 1000 -v "$1"
+else
+    exec tail -n +1 "$@"
+fi

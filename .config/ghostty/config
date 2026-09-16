@@ -1,0 +1,22 @@
+font-family = "Ubuntu Sans Mono"
+font-family = "Miriam Mono CLM"
+font-style = Bold
+font-size = 18
+
+background = #231F1D
+foreground = #FFA500
+
+palette = 2=#0EA20E
+palette = 4=#2A7ADD
+
+cursor-style = block
+cursor-style-blink = false
+cursor-color = #3598FF
+cursor-text = #FFA500
+resize-overlay = never
+
+bell-features = false
+shell-integration-features = no-cursor,no-title
+
+keybind = alt+u=scroll_page_fractional:-0.5
+keybind = alt+d=scroll_page_fractional:0.5

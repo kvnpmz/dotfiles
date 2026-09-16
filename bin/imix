@@ -1,0 +1,94 @@
+#!/bin/bash
+
+TITLE="imix"
+
+DIRECTORY="/run/media/kevin/Storage/files/pictures/private/cutegeekie/images"
+PLAYLIST="$(mktemp /tmp/media-shuffle.XXXXXX.m3u)"
+
+TRANSPOSE=2
+IMAGECOUNT=50
+DURATION=8
+ONCE=0
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+declare -A OPTIONS=(
+    [--directory]=DIRECTORY
+    [-d]=DIRECTORY
+    [--count]=IMAGECOUNT
+    [-c]=IMAGECOUNT
+    [--duration]=DURATION
+    [--transpose]=TRANSPOSE
+    [-t]=TRANSPOSE
+    [--title]=TITLE
+)
+
+while [[ $# -gt 0 ]]; do
+    option="$1"
+
+    if [[ "$option" == "--once" ]]; then
+        ONCE=1
+        shift
+        continue
+    fi
+
+    value="$2"
+
+    [[ -n "${OPTIONS[$option]}" ]] || error_exit "Unknown option: $option"
+    [[ -n "$value" ]] || error_exit "Missing value for $option"
+
+    declare -n target="${OPTIONS[$option]}"
+    target="$value"
+
+    shift 2
+done
+
+if [[ "$TRANSPOSE" != "1" && "$TRANSPOSE" != "2" ]]; then
+    error_exit "Invalid transpose value: '$TRANSPOSE'. Must be 1 or 2."
+fi
+
+[[ -d "$DIRECTORY" ]] ||
+    error_exit "Directory does not exist: $DIRECTORY"
+
+IMAGE_FILES=$(mktemp /tmp/media-files.XXXXXX)
+
+find -L "$(realpath "$DIRECTORY")" -maxdepth 3 -type f \( \
+    -iname '*.jpg' -o \
+    -iname '*.jpeg' -o \
+    -iname '*.png' -o \
+    -iname '*.webp' -o \
+    -iname '*.gif' \
+    \) > "$IMAGE_FILES"
+
+FILECOUNT=$(wc -l < "$IMAGE_FILES")
+
+[[ "$FILECOUNT" -gt 0 ]] || error_exit "No images found"
+
+if [[ "$IMAGECOUNT" -gt "$FILECOUNT" ]]; then
+    IMAGECOUNT="$FILECOUNT"
+fi
+
+shuf -n "$IMAGECOUNT" "$IMAGE_FILES" > "$PLAYLIST"
+
+[[ -s "$PLAYLIST" ]] || error_exit "No images found"
+
+# echo "Playing images from: $(dirname "$(head -n1 "$PLAYLIST")")"
+if [[ "$ONCE" == "1" ]]; then
+    LOOP_OPTION="--no-loop-playlist"
+else
+    LOOP_OPTION="--loop-playlist"
+fi
+
+mpv \
+    --aid=no \
+    --title="$TITLE" \
+    $LOOP_OPTION \
+    --playlist="$PLAYLIST" \
+    --video-zoom=0.5 \
+    --image-display-duration="$DURATION" \
+    --script="$HOME/.config/mpv/manual_scripts/rotate_image_auto.lua" \
+    --script-opts="rotate_image_auto-transpose=$TRANSPOSE" \
+    &>/dev/null

@@ -1,0 +1,4 @@
+UUID=a8ea0c9d-7c86-447e-bbc6-5dc4bfae5f2c / ext4 defaults 0 1
+UUID=6646-5D2F /boot/efi vfat defaults 0 2
+tmpfs /tmp tmpfs defaults,nosuid,nodev 0 0
+/swapfile none swap defaults 0 0

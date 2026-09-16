@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+argenctl context switch general
+
+cd ~/src/deemix
+qbg pnpm dev
+SERVER_PID=$!
+
+echo "Waiting for Deemix server to start..."
+while ! nc -z 127.0.0.1 6595; do
+  sleep 0.5
+done
+
+chromium --app="http://127.0.0.1:6595" --ozone-platform-hint=auto
+
+# Clean up the background server process when the browser is closed
+kill $SERVER_PID

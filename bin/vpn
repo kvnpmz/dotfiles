@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if ip link show vpn_nl >/dev/null 2>&1; then
+    echo "Disconnecting vpn_nl..."
+    sudo wg-quick down vpn_nl &>/dev/null
+    sudo resolvconf -u &>/dev/null
+else
+    echo "Connecting vpn_nl..."
+    sudo wg-quick up vpn_nl &>/dev/null
+    echo "nameserver 10.2.0.1" | sudo tee /etc/resolv.conf &>/dev/null
+fi

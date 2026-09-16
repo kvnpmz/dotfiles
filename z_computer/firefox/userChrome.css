@@ -1,0 +1,21 @@
+#alltabs-button { display: none !important; } 
+:root {
+  --toolbar-color: #FFA500 !important;
+  --lwt-text-color: #FFA500 !important;
+}
+
+#TabsToolbar,
+#nav-bar,
+#PersonalToolbar,
+#toolbar-menubar {
+  color: #FFA500 !important;
+}
+
+.tab-label,
+.bookmark-item,
+.toolbarbutton-text,
+.menu-text,
+menu,
+menuitem {
+  color: #FFA500 !important;
+}

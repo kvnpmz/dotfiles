@@ -1,0 +1,5 @@
+#!/bin/sh
+
+export GTK_IM_MODULE=simple
+exec "$HOME/.local/bin/ghostty" "$@"
+

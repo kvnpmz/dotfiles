@@ -1,0 +1,1 @@
+{ git diff upstream/main > full_diff.patch; grep -i -C 3 -E "alloc|free|defer|destroy|leak|arena" full_diff.patch > filtered_diff.patch; split -b 4096 filtered_diff.patch diff_chunk_; } | cpy

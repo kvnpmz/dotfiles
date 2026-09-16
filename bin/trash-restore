@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+trash="$HOME/.local/share/Trash"
+files="$trash/files"
+info="$trash/info"
+
+for file in "$@"; do
+    name="$(basename -- "$file")"
+    info_file="$info/$name.trashinfo"
+
+    if [ ! -f "$info_file" ]; then
+        echo "No trash metadata found for: $name"
+        continue
+    fi
+
+    original="$(sed -n 's/^Path=//p' "$info_file" | head -n1)"
+
+    if [ -z "$original" ]; then
+        echo "Could not determine original path: $name"
+        continue
+    fi
+
+    if [ -e "$original" ]; then
+        echo "Destination already exists: $original"
+        continue
+    fi
+
+    mkdir -p -- "$(dirname -- "$original")"
+    mv -- "$file" "$original"
+    rm -- "$info_file"
+done

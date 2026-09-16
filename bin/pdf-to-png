@@ -1,0 +1,13 @@
+#!/bin/bash
+
+input="$1"
+output="$2"
+
+magick -density 300 "$input" \
+  -colorspace sRGB \
+  -background white \
+  -alpha remove \
+  -type truecolor \
+  -profile /usr/share/ghostscript/10.06.0/iccprofiles/srgb.icc \
+  "$output"
+

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+cities=(
+    "FLL|America/New_York"
+    "AUS|America/Chicago"
+    "BUE|America/Argentina/Buenos_Aires"
+)
+
+state_file="/tmp/worldclock_state"
+
+if [ -f "$state_file" ]; then
+    index=$(cat "$state_file")
+else
+    index=0
+fi
+
+current_entry="${cities[$index]}"
+city_name="${current_entry%%|*}"
+tz="${current_entry##*|}"
+
+current_time=$(TZ="$tz" date '+%Y %H:%M:%S')
+echo "$current_time $city_name"
+

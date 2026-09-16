@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+DEST="$HOME/z_computer/etc"
+LIST="$HOME/z_computer/etc-files"
+
+mkdir -p "$DEST"
+
+while IFS= read -r src; do
+    [[ -z "$src" || "$src" == \#* ]] && continue
+
+    if [[ ! -e "$src" ]]; then
+        echo "Warning: $src does not exist, skipping"
+        continue
+    fi
+
+    sudo cp -R --no-preserve=mode,ownership "$src" "$DEST/"
+done < "$LIST"
+
+sudo chown -R "$USER:$USER" "$DEST"

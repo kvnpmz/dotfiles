@@ -1,0 +1,2 @@
+#!/bin/bash
+exec env SLINT_SCALE_FACTOR=1.5 /home/kevin/Documents/Krokiet "$@"

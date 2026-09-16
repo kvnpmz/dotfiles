@@ -1,0 +1,5 @@
+#!/bin/bash
+
+argenctl context switch general
+exec mpv "$@"
+

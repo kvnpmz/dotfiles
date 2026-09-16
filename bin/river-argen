@@ -1,0 +1,6 @@
+#!/bin/sh
+
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+
+exec dbus-run-session river -c argen > /tmp/river-argen.log 2>&1
+

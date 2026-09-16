@@ -1,0 +1,16 @@
+#!/bin/bash
+
+for f in ./*.mp4 ./*.png; do
+    [ -f "$f" ] || continue
+
+    filename="${f#./}"
+    extension="${filename##*.}"
+    stem="${filename%.*}"
+
+    new="./${stem:0:20}.${extension}"
+
+    [ "$f" = "$new" ] && continue
+    [ -e "$new" ] && continue
+
+    mv -- "$f" "$new"
+done

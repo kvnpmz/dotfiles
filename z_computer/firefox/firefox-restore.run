@@ -1,0 +1,3 @@
+#!/bin/sh
+/usr/local/bin/firefox-ram-restore
+exec pause

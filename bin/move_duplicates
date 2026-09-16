@@ -1,0 +1,18 @@
+mkdir -p "$HOME/Downloads/to_be_deleted"
+
+awk '
+    /^MATCH:/ {
+        getline
+        getline
+        getline
+        print
+    }
+' duplicates.txt |
+while IFS= read -r file; do
+    if [[ -f "$file" ]]; then
+        echo "Moving: $file"
+        mv -- "$file" "$HOME/Downloads/to_be_deleted/"
+    else
+        echo "NOT FOUND: $file"
+    fi
+done

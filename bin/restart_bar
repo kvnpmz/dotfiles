@@ -1,0 +1,10 @@
+#!/bin/bash
+
+pkill -x creek
+
+while pgrep -x creek >/dev/null; do
+    sleep 0.1
+done
+
+qbg /home/kevin/bin/creek_start
+

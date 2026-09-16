@@ -1,0 +1,4 @@
+sync-etc
+dotfile add ~/.gitignore ~/.bashrc ~/.config ~/bin ~/z_computer
+dotfile commit -m "Update dotfiles"
+dotfile push
