@@ -6,7 +6,8 @@ local helper = require("helpers")
 os.setlocale("", "time")
 
 local last_cpu_time = 0
-local cpu_usage = "󱐋 0%"
+local cpu_usage = "󱐋 0 %"
+local cpu_values = {}
 local last_mem_time = -1
 local cached_mem_status = ""
 local last_battery_time = -1
@@ -38,13 +39,28 @@ while true do
         local prev_sample = helper.cpu_times()
         io.popen("sleep 0.05"):close()
         local curr_sample = helper.cpu_times()
-        
+
         if prev_sample and curr_sample then
             local pct = helper.cpu_percent(prev_sample, curr_sample)
-            cpu_usage = string.format(" 󱐋 %2.0f%%", pct)
+
+            table.insert(cpu_values, pct)
+
+            if #cpu_values > 5 then
+                table.remove(cpu_values, 1)
+            end
+
+            local total = 0
+            for _, value in ipairs(cpu_values) do
+                total = total + value
+            end
+
+            local average = total / #cpu_values
+
+            cpu_usage = string.format(" 󱐋 %2.0f %%", average)
         else
-            cpu_usage = " 󱐋 0%"
+            cpu_usage = " 󱐋 0 %"
         end
+
         last_cpu_time = current_time
     end
 
@@ -110,7 +126,7 @@ while true do
             bat_icon = icons[index]
         end
 
-        battery_str = string.format("%s %d%%", bat_icon, battery.capacity)
+        battery_str = string.format("%s %d %%", bat_icon, battery.capacity)
     end
 
     if current_time ~= last_time_update then
@@ -124,7 +140,7 @@ while true do
         ) or os.date("%A, %d %B")
 
         local display_width = helper.display_width(raw_date)
-        local date_width = 42
+        local date_width = 40
         local padding_needed = math.max(0, date_width - display_width)
         cached_date_str = string.rep(" ", padding_needed) .. raw_date
 
@@ -173,9 +189,9 @@ while true do
         local vol_float = tonumber(vol_info:match("%d+%.%d+"))
         if vol_float then
             local vol_pct = math.floor(vol_float * 100 + 0.5)
-            volume_str = string.format("󰕾 %3d%%", vol_pct)
+            volume_str = string.format("󰕾 %3d %%", vol_pct)
         else
-            volume_str = string.format("󰕾 %3d%%", 0)
+            volume_str = string.format("󰕾 %3d %%", 0)
         end
     else
         volume_str = string.format("󰕾 %3d%%", 0)
@@ -187,7 +203,7 @@ while true do
         return value or ""
     end 
 
-    local SPACER = "                "
+    local SPACER = "               "
 
     local final_output = string.format( "%s %s %s %s %s %s %s %s %s %s %s %s %s\n", 
         nz(contexts_line), 

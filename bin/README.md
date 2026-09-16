@@ -7,6 +7,7 @@ A categorized reference for flat scripts residing in `~/bin`.
 * **`imix`** - Image shuffling mix screensaver/player.
 * **`mix`** - Controller for imix and vmix.
 * **`mpvbg`** - Play looping background video via MPV.
+* **`mpvfg`** - Play foreground video via MPV.
 * **`mus`** - Shuffle and loop music playlist.
 * **`playlist-create`** - Generate a music playlist m3u8 file.
 * **`vmix`** - Video mix player from storage.
@@ -32,8 +33,9 @@ A categorized reference for flat scripts residing in `~/bin`.
 * **`kwim-watcher`** - Monitor udev input events for kwim.
 * **`locale-switch`** - Switch system locale/language.
 * **`power_menu`** - Fuzzel-based power management menu.
-* **`restart-waybar`** - Restart waybar panel (supports Hebrew config).
+* **`restart_bar`** - Restart panel/bar components.
 * **`river-argen`** - Launch River window manager via D-Bus session.
+* **`argen-status-loop.sh`** - Background status loop for argen environment.
 * **`rotate_left` / `rotate_right` / `screen_rotate.lua`** - Screen orientation controls.
 * **`screenkey-toggle`** - Toggle showmethekey screencast utility.
 * **`screenshot`** - Capture screen region to clipboard and file.
@@ -42,8 +44,10 @@ A categorized reference for flat scripts residing in `~/bin`.
 * **`sync-etc`** - Sync configuration files listed in `etc-files`.
 * **`toggle_red`** - Toggle gammastep color temperature.
 * **`usb`** - Locate and mount Storage USB label.
+* **`mtp` / `mtp-off`** - Mount or unmount MTP storage devices.
 * **`xkb_status` / `xkb_toggle`** - Keyboard layout status and cycler.
 * **`context_move.sh`** - Move focused window to a target context.
+* **`timezone_change`** - Update system timezone settings.
 
 ### Development & Containers
 * **`cbt`** - Quick connect to Bluetooth device.
@@ -74,5 +78,5 @@ A categorized reference for flat scripts residing in `~/bin`.
 * **`michael_report.sh`** - Generate Michael listing sales report.
 * **`nvm`** - Lazy-load Node Version Manager wrapper.
 * **`qbg`** - Quiet background task runner with disown.
+* **`creek_start`** - Initialize creek topbar.
 * **`check-readme`** - Cross-reference bin directory contents with README index.
-
