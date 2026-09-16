@@ -5,7 +5,7 @@ for i in 1 2 3; do
         exit 0
     fi
 
-    [ "$i" -lt 3 ] && sleep 1
+    [ "$i" -lt 3 ] && sleep 5
 done
 
 exit 1

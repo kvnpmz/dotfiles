@@ -1,16 +1,23 @@
-#!/bin/sh
+#!/usr/bin/env lua
 
-case "$1" in
-    󰐥)
-        /home/kevin/bin/power_menu &
-        ;;
-    F|A|B)
-        /home/kevin/bin/timezone_change &
-        ;;
-    󰕾|󰖀|󰕿|󰖁|󰝟)
-        wpctl set-mute @DEFAULT_SINK@ toggle &
-        ;;
-    󰯄|󱎘)
-        /home/kevin/bin/vpn &
-        ;;
-esac
+local rune = arg[1]
+if not rune then os.exit(1) end
+
+local actions = {
+    ["󰐥"] = "/home/kevin/bin/power_menu &",
+
+    ["F"] = "/home/kevin/bin/timezone_change &",
+    ["A"] = "/home/kevin/bin/timezone_change &",
+    ["B"] = "/home/kevin/bin/timezone_change &",
+    
+    ["󰕾"] = "wpctl set-mute @DEFAULT_SINK@ toggle &",
+    ["󰝟"] = "wpctl set-mute @DEFAULT_SINK@ toggle &",
+    
+    ["󰯄"] = "/home/kevin/bin/vpn &",
+    ["󱎘"] = "/home/kevin/bin/vpn &",
+}
+
+if actions[rune] then
+    os.execute(actions[rune])
+end
+

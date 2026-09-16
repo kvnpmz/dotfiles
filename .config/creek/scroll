@@ -1,20 +1,17 @@
-#!/bin/sh
+#!/usr/bin/env lua
 
-case "$1:$2" in
-    # Match any volume state icon going UP
-    󰕾:up|󰖀:up|󰕿:up|󰖁:up|󰝟:up)
-        wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'
-        ;;
-    # Match any volume state icon going DOWN
-    󰕾:down|󰖀:down|󰕿:down|󰖁:down|󰝟:down)
-        wpctl set-volume @DEFAULT_SINK@ '5%-'
-        ;;
-        
-    # Brightness
-    󰃠:up)
-        brightnessctl set +5%
-        ;;
-    󰃠:down)
-        brightnessctl set 5%-
-        ;;
-esac
+local rune, direction = arg[1], arg[2]
+if not rune or not direction then os.exit(1) end
+
+local actions = {
+    ["󰕾:up"]   = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'",
+    ["󰕾:down"] = "wpctl set-volume @DEFAULT_SINK@ '5%-'",
+    
+    ["󰃠:up"]    = "brightnessctl set +5%",
+    ["󰃠:down"]  = "brightnessctl set 5%-",
+}
+
+local cmd = actions[rune .. ":" .. direction]
+if cmd then
+    os.execute(cmd)
+end

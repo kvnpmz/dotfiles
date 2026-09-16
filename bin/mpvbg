@@ -1,4 +1,5 @@
 #!/bin/bash
+
 mpv --loop "$1" >/dev/null 2>&1 </dev/null &
 disown
 pid=$!
