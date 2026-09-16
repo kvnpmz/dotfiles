@@ -1,4 +1,12 @@
 #!/bin/sh
 
-bluetoothctl connect 8C:67:48:B8:8D:C4
+for i in 1 2 3; do
+    if bluetoothctl connect 8C:67:48:B8:8D:C4; then
+        exit 0
+    fi
+
+    [ "$i" -lt 3 ] && sleep 1
+done
+
+exit 1
 
