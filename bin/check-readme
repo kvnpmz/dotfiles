@@ -1,0 +1,19 @@
+#!/bin/bash
+readme="$HOME/bin/README.md"
+echo "=== In bin, missing from README ==="
+for f in "$HOME"/bin/*; do
+    [ -f "$f" ] || continue
+    name=$(basename "$f")
+    [ "$name" = "README.md" ] && continue
+    if ! grep -q "\`$name\`" "$readme"; then
+        echo "  $name"
+    fi
+done
+
+echo -e "\n=== In README, missing from bin ==="
+grep -oE '\*\*`[^`]+`\*\*' "$readme" | tr -d '*`' | while read -r name; do
+    if [ ! -e "$HOME/bin/$name" ]; then
+        echo "  $name"
+    fi
+done
+

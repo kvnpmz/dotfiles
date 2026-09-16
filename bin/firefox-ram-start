@@ -1,0 +1,6 @@
+#!/bin/sh
+/usr/local/bin/firefox-ram-restore
+firefox -P kevin
+status=$?
+/usr/local/bin/firefox-ram-save
+exit $status

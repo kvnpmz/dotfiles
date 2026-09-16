@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: hash-images DIRECTORY"
+    exit 1
+fi
+
+DIR="$1"
+OUTPUT="${DIR%/}/image_hashes.txt"
+
+find "$DIR" -type f \( \
+    -iname "*.jpg" -o \
+    -iname "*.jpeg" -o \
+    -iname "*.png" -o \
+    -iname "*.webp" -o \
+    -iname "*.gif" -o \
+    -iname "*.heic" -o \
+    -iname "*.heif" -o \
+    -iname "*.avif" \
+\) -print0 | xargs -0 sha256sum > "$OUTPUT"
+
+echo "Created:"
+echo "  $OUTPUT"
+echo
+echo "Hashes:"
+wc -l < "$OUTPUT"

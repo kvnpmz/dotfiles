@@ -1,0 +1,32 @@
+mtp-off() {
+    # Find and unmount active MTP activation root
+    local mtp_uri
+    mtp_uri=$(gio mount -li 2>/dev/null | grep -oP 'activation_root=\Kmtp://[^[:space:]]+' | head -n 1)
+
+    if [[ -n "$mtp_uri" ]]; then
+        gio mount -u "$mtp_uri" 2>/dev/null || true
+        echo "Unmounted MTP device: $mtp_uri"
+    else
+        # Fallback unmount via gvfs path
+        local target
+        target=$(compgen -G "/run/user/1000/gvfs/mtp:host=*" | head -n 1)
+        if [[ -n "$target" ]]; then
+            gio mount -u "$target" 2>/dev/null || true
+            echo "Unmounted MTP path: $target"
+        else
+            echo "No active MTP mount found."
+        fi
+    fi
+
+    # Move out of ~/phone if currently inside it
+    if [[ "$PWD" == "$HOME/phone"* ]]; then
+        cd "$HOME"
+    fi
+
+    # Remove the local symlink
+    if [[ -L "$HOME/phone" ]]; then
+        rm -f "$HOME/phone"
+        echo "Removed ~/phone symlink."
+    fi
+}
+

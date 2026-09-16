@@ -1,0 +1,15 @@
+#!/bin/bash
+
+for f in ./*.mp4 ./*.png; do
+    [ -e "$f" ] || continue
+
+    prefix=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 10)
+    new="./${prefix}_$(basename "$f")"
+
+    while [ -e "$new" ]; do
+        prefix=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 10)
+        new="./${prefix}_$(basename "$f")"
+    done
+
+    mv -- "$f" "$new"
+done

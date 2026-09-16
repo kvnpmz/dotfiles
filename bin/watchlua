@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# Check if main.lua exists in the current directory
+if [ ! -f "main.lua" ]; then
+    echo "Error: main.lua not found in current directory."
+    exit 1
+fi
+
+echo "Watching $(pwd)/main.lua..."
+
+# Monitor the current directory for changes
+# The -q (quiet) flag keeps it cleaner, only printing what we want
+inotifywait -m -q -e close_write -e moved_to . |
+while read -r _ _ filename; do
+    if [ "$filename" == "main.lua" ]; then
+        echo "[$(date +'%H:%M:%S')] Change detected! Running main.lua..."
+        echo "-----------------------------------"
+        lua main.lua
+    fi
+done

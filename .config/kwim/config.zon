@@ -1,0 +1,29 @@
+.{
+    .libinput_device_rules = .{
+        .{
+            .name = .{
+                .str = ".*[tT]ouchpad.*",
+                .regex = true,
+            },
+            .tap = .enabled,
+            .left_handed = .enabled,
+        },
+        .{ 
+            .name = .{
+                .str = ".*M550.*|.*Mouse.*", .regex = true
+            },
+            .left_handed = .enabled,
+        },
+    },
+    .xkb_keyboard_rules = .{
+        .{
+            .keymap = .{
+                .options = .{
+                    .layout = "us,il,gr",
+                    .variant = "intl,,",
+                    .options = "grp:win_space_toggle",
+                },
+            },
+        },
+    },
+}

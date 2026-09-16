@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if pgrep -f "gammastep.*-O 1500" >/dev/null; then
+    pkill gammastep 2>/dev/null
+    gammastep -O 2000 &
+    echo "Switched to 2000K"
+else
+    pkill gammastep 2>/dev/null
+    gammastep -O 1500 &
+    echo "Switched to 1500K"
+fi

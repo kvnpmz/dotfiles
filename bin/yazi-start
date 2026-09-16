@@ -1,0 +1,3 @@
+#!/bin/sh
+
+exec "$HOME/.local/bin/ghostty" --class=com.kevin.yazi -e "$HOME/.local/bin/yazi" "$HOME"

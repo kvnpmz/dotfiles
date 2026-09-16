@@ -1,0 +1,64 @@
+#!/bin/bash
+
+TITLE="mix"
+
+DIRECTORY=""
+
+TRANSPOSE=2
+DURATION=10
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+declare -A OPTIONS=(
+    [--directory]=DIRECTORY
+    [-d]=DIRECTORY
+    [--transpose]=TRANSPOSE
+    [-t]=TRANSPOSE
+    [--duration]=DURATION
+    [--title]=TITLE
+)
+
+while [[ $# -gt 0 ]]; do
+    option="$1"
+    value="$2"
+
+    [[ -n "${OPTIONS[$option]}" ]] ||
+        error_exit "Unknown option: $option"
+
+    [[ -n "$value" ]] ||
+        error_exit "Missing value for $option"
+
+    declare -n target="${OPTIONS[$option]}"
+    target="$value"
+
+    shift 2
+done
+
+if [[ "$TRANSPOSE" != "1" && "$TRANSPOSE" != "2" ]]; then
+    error_exit "Invalid transpose value: '$TRANSPOSE'. Must be 1 or 2."
+fi
+[[ -d "$DIRECTORY" ]] ||
+    error_exit "Directory does not exist: $DIRECTORY"
+
+DIRECTORY="$(realpath "$DIRECTORY")"
+
+while true; do
+    imix \
+        --title "$TITLE" \
+        --directory "$DIRECTORY" \
+        --count 10 \
+        --duration "$DURATION" \
+        --transpose "$TRANSPOSE" \
+        --once || sleep 2
+
+    vmix \
+        --title "$TITLE" \
+        --directory "$DIRECTORY" \
+        --count 1 \
+        --transpose "$TRANSPOSE" \
+        --once || sleep 2
+done
+

@@ -1,0 +1,71 @@
+#!/bin/bash
+
+set -e
+
+TARGET_USER="${SUDO_USER:-$USER}"
+TARGET_HOME=$(getent passwd "$TARGET_USER" | cut -d: -f6)
+
+case "$1" in
+    en)
+        NEW_LANG="en_US.UTF-8"
+        NEW_LC_TIME="en_US.UTF-8"
+        ;;
+    ca)
+        NEW_LANG="ca_ES.UTF-8"
+        NEW_LC_TIME="ca_ES.UTF-8"
+        ;;
+    el)
+        NEW_LANG="el_GR.UTF-8"
+        NEW_LC_TIME="el_GR.UTF-8"
+        ;;
+    es)
+        NEW_LANG="es_AR.UTF-8"
+        NEW_LC_TIME="es_AR.UTF-8"
+        ;;
+    fr)
+        NEW_LANG="fr_FR.UTF-8"
+        NEW_LC_TIME="fr_FR.UTF-8"
+        ;;
+    he)
+        NEW_LANG="he_IL.UTF-8"
+        NEW_LC_TIME="he_IL.UTF-8"
+        ;;
+    it)
+        NEW_LANG="it_IT.UTF-8"
+        NEW_LC_TIME="it_IT.UTF-8"
+        ;;
+    pt)
+        NEW_LANG="pt_BR.UTF-8"
+        NEW_LC_TIME="pt_BR.UTF-8"
+        ;;
+    *)
+        echo "Usage: $0 {en|ca|el|es|fr|he|it|pt}"
+        exit 1
+        ;;
+esac
+
+echo "Setting locale for $TARGET_USER:"
+echo "LANG=$NEW_LANG"
+echo "LC_TIME=$NEW_LC_TIME"
+
+# AccountsService language (root)
+sudo sed -i "s/^Languages=.*/Languages=${NEW_LANG};/" \
+    "/var/lib/AccountsService/users/$TARGET_USER"
+
+# System locale (root)
+sudo tee /etc/locale.conf >/dev/null <<EOF
+LANG=$NEW_LANG
+LC_TIME=$NEW_LC_TIME
+EOF
+
+# User environment
+mkdir -p "$TARGET_HOME/.config/environment.d"
+
+cat > "$TARGET_HOME/.config/environment.d/locale.conf" <<EOF
+LANG=$NEW_LANG
+LC_TIME=$NEW_LC_TIME
+EOF
+
+chown "$TARGET_USER:$TARGET_USER" \
+    "$TARGET_HOME/.config/environment.d/locale.conf"
+

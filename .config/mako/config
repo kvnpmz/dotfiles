@@ -1,0 +1,13 @@
+background-color=#231F1D
+text-color=#FFA500
+border-color=#FFA500
+
+width=450
+
+font=Ubuntu Sans Bold 16
+anchor=top-center
+
+border-size=2
+border-radius=12
+padding=12
+margin=20

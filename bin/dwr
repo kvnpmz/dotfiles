@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+source ~/z_ob/etsy/TemplatePrintable/env.sh
+dotnet watch run --no-hot-reload --verbosity detailed

@@ -1,0 +1,55 @@
+-------
+Wi-Fi (NetworkManager / nmcli)
+-------
+
+* Check status:
+  nmcli general status
+
+* Show Wi-Fi networks:
+  nmcli device wifi list
+
+* Connect:
+  nmcli device wifi connect "SSID" password "PASSWORD"
+
+* Show current connection:
+  nmcli connection show --active
+
+* Disconnect:
+  nmcli device disconnect wlan0
+
+-------
+Bluetooth (bluetoothctl)
+-------
+
+* Enter Bluetooth:
+  bluetoothctl
+
+Inside bluetoothctl:
+
+* List devices:
+  devices
+
+* Scan:
+  scan on
+
+* Stop scan:
+  scan off
+
+* Pair:
+  pair MAC_ADDRESS
+
+* Connect:
+  connect MAC_ADDRESS
+
+* Disconnect:
+  disconnect MAC_ADDRESS
+
+* Forget device:
+  remove MAC_ADDRESS
+
+* Trust device (auto-connect):
+  trust MAC_ADDRESS
+
+* Exit:
+  quit
+

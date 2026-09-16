@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+if [ "$#" -ne 2 ]; then
+    echo "Usage: compare-image-hashes EXISTING_HASHES NEW_HASHES"
+    exit 1
+fi
+
+EXISTING="$1"
+NEW="$2"
+
+if [ ! -f "$EXISTING" ]; then
+    echo "Error: file not found: $EXISTING"
+    exit 1
+fi
+
+if [ ! -f "$NEW" ]; then
+    echo "Error: file not found: $NEW"
+    exit 1
+fi
+
+awk '
+NR==FNR {
+    hash=$1
+    path=substr($0,index($0,$2))
+    existing[hash]=path
+    next
+}
+{
+    hash=$1
+    path=substr($0,index($0,$2))
+
+    if (hash in existing) {
+        print "MATCH"
+        print "  NEW:      " path
+        print "  EXISTING: " existing[hash]
+        print "  SHA256:   " hash
+        print ""
+        matches++
+    }
+}
+END {
+    print "========================================"
+    print "Matches: " matches+0
+    print "========================================"
+}
+' "$EXISTING" "$NEW"

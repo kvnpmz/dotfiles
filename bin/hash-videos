@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: hash-videos DIRECTORY"
+    exit 1
+fi
+
+DIR="$1"
+OUTPUT="${DIR%/}/video_hashes.txt"
+
+find "$DIR" -type f \( \
+    -iname "*.mp4" -o \
+    -iname "*.m4v" -o \
+    -iname "*.mov" -o \
+    -iname "*.mkv" \
+\) -print0 | xargs -0 sha256sum > "$OUTPUT"
+
+echo "Created:"
+echo "  $OUTPUT"
+echo
+echo "Hashes:"
+wc -l < "$OUTPUT"

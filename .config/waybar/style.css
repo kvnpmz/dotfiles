@@ -1,0 +1,105 @@
+* {
+    font-size: 24px;
+    border: none;
+    border-radius: 0;
+    font-family: "UbuntuSans Nerd Font";
+    font-weight: bold;
+    color: #FFA500;
+}
+
+window#waybar {
+    background: #231F1D;
+}
+
+#tags button {
+    padding: 0 10px;
+}
+
+#tags button:hover {
+    background-color: rgba(255, 255, 0, 0.15);
+}
+
+#tags button.focused {
+    background: rgba(255, 255, 0, 0.08);
+    margin: 2px 0; 
+    border-left: 2px solid #FFA500;
+    border-right: 2px solid #FFA500;
+    border-top: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    border-radius: 35px;
+}
+
+#cpu,
+#memory {
+    color: #FFA500;
+    padding: 0;
+}
+
+#wireplumber,
+#custom-keyboard,
+#custom-brightness,
+#custom-wireguard,
+#custom-power,
+#network,
+#battery,
+#clock.time,
+#clock.date {
+    color: #FFA500;
+    padding: 0 8px;
+}
+
+#custom-context-browser,
+#custom-context-terminal,
+#custom-context-files,
+#custom-context-general {
+    padding: 0 10px;
+    color: #FFA500;
+}
+
+#custom-context-browser:hover,
+#custom-context-terminal:hover,
+#custom-context-files:hover,
+#custom-context-general:hover {
+    background-color: rgba(255, 255, 0, 0.15);
+}
+
+#custom-context-browser.active,
+#custom-context-terminal.active,
+#custom-context-files.active,
+#custom-context-general.active {
+    background: rgba(255, 255, 0, 0.08);
+    margin: 2px 0; 
+    border-left: 2px solid #FFA500;
+    border-right: 2px solid #FFA500;
+    border-top: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    border-radius: 35px;
+}
+
+#custom-river-tag-1,
+#custom-river-tag-2,
+#custom-river-tag-3,
+#custom-river-tag-4 {
+    padding: 0 10px;
+    color: #FFA500;
+}
+
+#custom-river-tag-1.hover,
+#custom-river-tag-2.hover,
+#custom-river-tag-3.hover,
+#custom-river-tag-4.hover {
+    background-color: rgba(255, 255, 0, 0.15);
+}
+
+#custom-river-tag-1.active,
+#custom-river-tag-2.active,
+#custom-river-tag-3.active,
+#custom-river-tag-4.active {
+    background: rgba(255, 255, 0, 0.08);
+    margin: 2px 0; 
+    border-left: 2px solid #FFA500;
+    border-right: 2px solid #FFA500;
+    border-top: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    border-radius: 35px;
+}

@@ -1,0 +1,29 @@
+mtp() {
+    # Extract the activation URI of the currently connected MTP device
+    local mtp_uri
+    mtp_uri=$(gio mount -li 2>/dev/null | grep -oP 'activation_root=\Kmtp://[^[:space:]]+' | head -n 1)
+
+    if [[ -n "$mtp_uri" ]]; then
+        gio mount "$mtp_uri" 2>/dev/null || true
+        
+        # Format the host string for the gvfs path
+        local host_str
+        host_str=$(echo "$mtp_uri" | sed 's|^mtp://||;s|/+$||')
+        local target="/run/user/1000/gvfs/mtp:host=${host_str}"
+
+        # Fallback search if exact host path varies slightly
+        if [[ ! -d "$target" ]]; then
+            target=$(compgen -G "/run/user/1000/gvfs/mtp:host=*" | head -n 1)
+        fi
+
+        if [[ -n "$target" && -d "$target" ]]; then
+            ln -sfn "$target" "$HOME/phone"
+            cd "$HOME/phone"
+            echo "Successfully mounted: $(basename "$target")"
+            return 0
+        fi
+    fi
+
+    echo "No MTP device found. Make sure the phone is unlocked and set to File Transfer mode."
+    return 1
+}

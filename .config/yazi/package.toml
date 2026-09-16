@@ -1,0 +1,7 @@
+[[plugin.deps]]
+use = "tasnimAlam/thumbnail"
+rev = "cc1e3af"
+hash = "731d1f372512998dbd6acd316cccfd27"
+
+[flavor]
+deps = []

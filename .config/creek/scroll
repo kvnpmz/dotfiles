@@ -1,0 +1,20 @@
+#!/bin/sh
+
+case "$1:$2" in
+    # Match any volume state icon going UP
+    󰕾:up|󰖀:up|󰕿:up|󰖁:up|󰝟:up)
+        wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'
+        ;;
+    # Match any volume state icon going DOWN
+    󰕾:down|󰖀:down|󰕿:down|󰖁:down|󰝟:down)
+        wpctl set-volume @DEFAULT_SINK@ '5%-'
+        ;;
+        
+    # Brightness
+    󰃠:up)
+        brightnessctl set +5%
+        ;;
+    󰃠:down)
+        brightnessctl set 5%-
+        ;;
+esac

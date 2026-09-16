@@ -1,0 +1,25 @@
+#!/bin/sh
+
+STATE="$HOME/.keyboard_layout"
+LOG="/tmp/layout-test.log"
+
+case "$(cat "$STATE" 2>/dev/null)" in
+    us)
+        echo il > "$STATE"
+        ;;
+    il)
+        echo gr > "$STATE"
+        ;;
+    gr)
+        echo us > "$STATE"
+        ;;
+    *)
+        echo us > "$STATE"
+        ;;
+esac
+
+CURRENT=$(cat "$STATE")
+
+echo "$(date): Super+Space -> $CURRENT" >> "$LOG"
+echo "$CURRENT"
+

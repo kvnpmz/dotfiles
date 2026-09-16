@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+# Check if main.tl exists
+if [ ! -f "main.tl" ]; then
+    echo "Error: main.tl not found in current directory."
+    exit 1
+fi
+
+echo "Watching $(pwd)/main.tl..."
+
+inotifywait -m -q -e close_write -e moved_to . |
+while read -r _ _ filename; do
+    if [ "$filename" == "main.tl" ]; then
+        echo "[$(date +'%H:%M:%S')] Change detected!"
+        
+        echo "Compiling main.tl..."
+        if tl gen main.tl; then
+            echo "Running main.lua..."
+            echo "-----------------------------------"
+            lua main.lua
+        else
+            echo "Compilation failed. Check your types."
+        fi
+        echo "-----------------------------------"
+    fi
+done

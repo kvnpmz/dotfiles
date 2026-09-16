@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: find-duplicate-hashes HASH_FILE"
+    exit 1
+fi
+
+awk '
+{
+    hash=$1
+    path=substr($0,index($0,$2))
+    files[hash]=files[hash] "\n" path
+    count[hash]++
+}
+END {
+    matches=0
+    for (hash in count) {
+        if (count[hash] > 1) {
+            print "MATCH:", hash
+            print files[hash]
+            print ""
+            matches++
+        }
+    }
+    print "========================================"
+    print "Duplicate groups:", matches
+    print "========================================"
+}
+' "$1"

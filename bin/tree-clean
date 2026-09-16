@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+tree -I "obj|bin|lua_modules|output"

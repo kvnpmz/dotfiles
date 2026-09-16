@@ -1,0 +1,123 @@
+#!/usr/bin/env luajit
+
+local home = os.getenv("HOME")
+package.path = package.path .. ";" .. home .."/.config/argen/?.lua"
+local h = require("helper")
+
+local lc_time = os.getenv("LC_TIME")
+if not lc_time or lc_time == "" then
+    lc_time = os.getenv("LANG")
+end
+
+h.export({
+    LC_TIME = lc_time,
+    XDG_CURRENT_DESKTOP = "river",
+    XDG_SESSION_TYPE = "wayland",
+})
+
+h.start({
+    "gammastep -O 2000",
+    "swaybg -o eDP-1 -i " .. home .. "/Pictures/wallpapers/red.png -m fill",
+    "swayidle -w timeout 3600 '/usr/bin/sudo /usr/bin/zzz' before-sleep 'true'",
+    "mako",
+    home .. "/bin/battery-warning",
+    home .. "/bin/kwim-watcher",
+    "echo us > " .. home .. "/.keyboard_layout",
+})
+
+h.cmd("argenctl config set cursor-theme \"Yaru\"")
+h.cmd("argenctl config set cursor-size 42")
+
+h.flush()
+
+h.cmd("argenctl config set border-width 0")
+h.cmd("argenctl config set stacktile primary-ratio 0.6")
+h.cmd("argenctl config set stacktile outer-padding 0")
+h.cmd("argenctl config set stacktile inner-padding 4")
+
+h.flush()
+
+h.cmd("argenctl config set 2x2 outer-padding 0")
+h.cmd("argenctl config set 2x2 inner-padding 6")
+
+h.flush()
+
+h.cmd("argenctl context new browser")
+h.cmd("argenctl context new terminal")
+h.cmd("argenctl context new files")
+h.cmd("argenctl context new general")
+
+h.flush()
+
+h.cmd("argenctl rule add context --app-id \"Firefox\" browser")
+h.cmd("argenctl rule add context --app-id \"com.mitchellh.ghostty\" terminal")
+h.cmd("argenctl rule add context --app-id \"com.kevin.yazi\" files")
+h.cmd("argenctl rule add context --app-id \"mpv\" general")
+
+h.start({
+    home .. "/bin/firefox-ram-start",
+    home .. "/bin/ghostty",
+    home .. "/bin/yazi-start",
+    home .. "/bin/creek_start",
+})
+
+h.cmd("argenctl context switch browser")
+
+
+h.start({ "pipewire >/tmp/pipewire.log 2>&1" })
+
+h.start({
+    home .. "/bin/start_audio.sh",
+    "/usr/local/bin/sunshine >/tmp/sunshine.log 2>&1",
+})
+
+h.cmd("argenctl rule add float --app-id \"one.alynx.showmethekey\"")
+
+h.cmd("argenctl pointer-binding set normal Super BTN_LEFT move-window")
+h.cmd("argenctl pointer-binding set normal Super BTN_RIGHT resize-window")
+
+local context_names = { "browser", "terminal", "files", "general" }
+for i, name in ipairs(context_names) do
+    h.cmd(
+        "argenctl binding set normal Super %d sh \"argenctl context switch %s && pkill -RTMIN+8 waybar\"",
+        i, name
+    )
+
+    h.cmd(
+        "argenctl binding set normal Super+Shift %d exec \"%s/bin/context_move.sh\" %s",
+        i, home, name
+    )
+end
+
+h.bind_keys({
+    { mode = "normal", key = "Control+Alt T", action = "exec", value = home .. "/.local/bin/ghostty" },
+    { mode = "normal", key = "Super E", action = "exec", value = home .. "/bin/yazi-start" },
+    { mode = "normal", key = "Super W", action = "exec", value = home .. "/bin/firefox-ram-start" },
+    { mode = "normal", key = "Super+Shift S", action = "exec", value = home .. "/bin/screenshot" },
+    { mode = "normal", key = "Super I", action = "exec", value = home .. "/bin/e1s.sh" },
+    { mode = "normal", key = "Super V", action = "exec", value = home .. "/bin/vpn" },
+    { mode = "normal", key = "Super C", action = "exec", value = home .. "/bin/timezone_change" },
+    { mode = "normal", key = "Super Space", action = "exec", value = home .. "/bin/xkb_toggle" },
+    { mode = "normal", key = "Super R", action = "exec", value = home .. "/bin/rotate_right" },
+    { mode = "normal", key = "Super+Shift R", action = "exec", value = home .. "/bin/rotate_left" },
+    { mode = "normal", key = "Super+Shift E", action = "exec", value = home .. "/bin/power_menu" },
+    { mode = "normal", key = "None XF86PowerOff", action = "exec", value = home .. "/bin/power_menu" },
+    { mode = "repeat", key = "None XF86AudioRaiseVolume", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'" },
+    { mode = "repeat", key = "None XF86AudioLowerVolume", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ '5%-'" },
+    { mode = "repeat", key = "None XF86AudioMute", action = "sh", value = "wpctl set-mute @DEFAULT_SINK@ toggle" },
+    { mode = "repeat", key = "Super A", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'" },
+    { mode = "repeat", key = "Super Z", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ '5%-'" },
+    { mode = "repeat", key = "Super X", action = "sh", value = "wpctl set-mute @DEFAULT_SINK@ toggle" },
+    { mode = "normal", key = "None XF86MonBrightnessUp", action = "exec", value = "brightnessctl set +5%" },
+    { mode = "normal", key = "None XF86MonBrightnessDown", action = "exec", value = "brightnessctl set 5%-" },
+    { mode = "repeat", key = "Super M", action = "sh", value = "brightnessctl set +5%" },
+    { mode = "repeat", key = "Super N", action = "sh", value = "brightnessctl set 5%-" },
+    { mode = "normal", key = "Super Q", action = "window", value = "close" },
+    { mode = "normal", key = "Super J", action = "window", value = "focus next" },
+    { mode = "normal", key = "Super K", action = "window", value = "focus prev" },
+    { mode = "normal", key = "Super+Shift J", action = "window", value = "swap next" },
+    { mode = "normal", key = "Super+Shift K", action = "window", value = "swap prev" },
+})
+
+h.flush()
+

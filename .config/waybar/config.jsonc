@@ -1,0 +1,128 @@
+{
+    "height" : 50,
+    "layer": "top",
+    "position": "top",
+    "modules-left": [
+        "custom/context-browser", "custom/context-terminal", "custom/context-files", "custom/context-general",
+        "cpu",
+        "custom/memory",
+        "battery"
+    ],
+    "modules-center": [
+        "custom/worldclock",
+        "clock#date"
+    ],
+    "modules-right": [
+        "custom/power",
+        "network",
+        "wireplumber",
+        "custom/brightness",
+        "custom/wireguard",
+        "custom/keyboard"
+    ],
+    "custom/worldclock": {
+        "exec": "/home/kevin/bin/worldclock",
+        "interval": 1,
+        "return-type": "json"
+    },
+    "clock#date": {
+        "interval": 60,
+        "format": "{:L%A, %d %B %Y}",
+        "tooltip": false
+    },
+    "battery": {
+        "bat": "BAT0",
+        "format": "{icon} {capacity}%",
+        "format-charging": "󰂄 {capacity}%",
+        "format-full": "󰁹 {capacity}%",
+        "format-icons": [
+            "󰂎",
+            "󰁺",
+            "󰁻",
+            "󰁼",
+            "󰁽",
+            "󰁾",
+            "󰁿",
+            "󰂀",
+            "󰂁",
+            "󰂂"
+        ]
+    },
+    "cpu": {
+        "format": "󱐋 {usage}% "
+    },
+    "custom/memory": {
+        "exec": "/home/kevin/bin/memory_status",
+        "return-type": "json",
+        "interval": 5
+    },
+    "custom/context-browser": {
+        "exec": "/home/kevin/.config/waybar/scripts/argen-single-context.sh browser",
+        "return-type": "json",
+        "interval": 10,
+        "signal": 8,
+        "on-click": "argenctl context switch browser && pkill -RTMIN+8 waybar"
+    },
+    "custom/context-terminal": {
+        "exec": "/home/kevin/.config/waybar/scripts/argen-single-context.sh terminal",
+        "return-type": "json",
+        "interval": 10,
+        "signal": 8,
+        "on-click": "argenctl context switch terminal && pkill -RTMIN+8 waybar"
+    },
+    "custom/context-files": {
+        "exec": "/home/kevin/.config/waybar/scripts/argen-single-context.sh files",
+        "return-type": "json",
+        "interval": 10,
+        "signal": 8,
+        "on-click": "argenctl context switch files && pkill -RTMIN+8 waybar"
+    },
+    "custom/context-general": {
+        "exec": "/home/kevin/.config/waybar/scripts/argen-single-context.sh general",
+        "return-type": "json",
+        "interval": 10,
+        "signal": 8,
+        "on-click": "argenctl context switch general && pkill -RTMIN+8 waybar"
+    },
+    "wireplumber": {
+        "format": "{icon}",
+        "format-muted": "󰝟 Muted",
+        "format-icons": ["󰕿", "󰖀", "󰕾"],
+        "tooltip-format": "{node_name}\nVolume: {volume}%",
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-scroll-up": "wpctl set-volume --limit 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+    },
+    "custom/keyboard": {
+        "exec": "/home/kevin/bin/xkb_status",
+        "interval": 1,
+        "tooltip": false
+    },
+    "custom/brightness": {
+        "exec": "brightnessctl -m | awk -F, '{print $4}'",
+        "interval": 1,
+        "format": "󰃠 ",
+        "tooltip-format": "Brightness: {}",
+        "on-scroll-up": "brightnessctl set 5%+",
+        "on-scroll-down": "brightnessctl set 5%-"
+    },
+    "network": {
+        "format-wifi": "󰤨",
+        "format-ethernet": "󰌗 ",
+        "format-disconnected": "󰤭 Disconnected",
+        "tooltip-format-wifi": "{essid}\nSignal: {signalStrength}%\nIP: {ipaddr}",
+        "tooltip-format-ethernet": "{ifname}\n{ipaddr}",
+        "tooltip-format-disconnected": "No connection"
+    },
+    "custom/wireguard": {
+        "exec": "ip link show vpn_nl >/dev/null 2>&1 && echo '󰯄' || echo '󱎘'", 
+        "interval": 5,
+        "on-click": "/home/kevin/bin/vpn",
+        "tooltip-format": "VPN NL"
+    },
+    "custom/power": {
+        "format": "󰐥",
+        "tooltip": false,
+        "on-click": "/home/kevin/bin/power_menu"
+    }
+}

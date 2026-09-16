@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+~/.config/creek/bar.lua | creek \
+  -hg 50 \
+  -fn "Ubuntu Sans Mono:size=24:weight=bold" \
+  -nf "0xffa500" \
+  -nb "0x231f1d" 2> /tmp/creek_leak_report.txt
+

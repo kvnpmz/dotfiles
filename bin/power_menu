@@ -1,0 +1,27 @@
+#!/bin/sh
+
+choice=$(printf '%s\n' \
+    "󰍃  Logout" \
+    "󰏤  Sleep" \
+    "󰜉  Restart" \
+    "󰐥  Shutdown" |
+    sed 's/^/  /' |
+    fuzzel --dmenu --hide-prompt "    Power: " )
+
+choice=$(printf '%s' "$choice" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+case "$choice" in
+    *Sleep)
+        sudo zzz >> /tmp/power-menu.log 2>&1
+        ;;
+    *Logout)
+        pkill pipewire
+        argenctl exit
+        ;;
+    *Shutdown)
+        sudo shutdown -P now >> /tmp/power-menu.log 2>&1
+        ;;
+    *Restart)
+        sudo shutdown -r now >> /tmp/power-menu.log 2>&1
+        ;;
+esac

@@ -1,0 +1,11 @@
+#!/bin/sh
+clean_trash() {
+    find "/home/kevin/.local/share/Trash/files" -mindepth 1 -maxdepth 1 -mmin +4320 -exec /usr/bin/rm -rf {} +
+    find "/home/kevin/.local/share/Trash/info" -mindepth 1 -maxdepth 1 -name "*.trashinfo" -mmin +4320 -exec /usr/bin/rm -f {} +
+}
+
+clean_trash
+while true; do
+    sleep 21600
+    clean_trash
+done

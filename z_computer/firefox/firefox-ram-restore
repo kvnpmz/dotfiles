@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+RAM=/dev/shm/firefox-kevin
+DISK=/home/kevin/.mozilla/firefox/a8o3uubf.kevin-1706213665373.disk
+mkdir -p "$RAM"
+rsync -a --delete "$DISK/" "$RAM/"
+chown -R kevin:kevin "$RAM"
+chmod 700 "$RAM"

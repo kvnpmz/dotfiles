@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+if [ "$#" -eq 0 ]; then
+    echo "Usage: fix-media <file1> [file2 ...]"
+    exit 1
+fi
+
+for file in "$@"; do
+    if [ ! -f "$file" ]; then
+        echo "Skipping: '$file' (not a file)"
+        continue
+    fi
+
+    ext="${file##*.}"
+    base="${file%.*}"
+    temp_file="${base}_fixed.${ext}"
+
+    echo "Processing: $file"
+    ffmpeg -hide_banner -i "$file" -map 0:v:0 -map 0:a:0 -c copy "$temp_file"
+
+    if [ $? -eq 0 ]; then
+        mv "$temp_file" "$file"
+        echo "Successfully fixed: $file"
+    else
+        echo "Error processing: $file"
+        rm -f "$temp_file"
+    fi
+done

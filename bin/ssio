@@ -1,0 +1,5 @@
+#!/bin/sh
+
+argenctl context switch general
+chromium --app=https://shellshock.io >/dev/null 2>&1 &
+
