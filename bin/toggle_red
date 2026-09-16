@@ -1,11 +1,16 @@
 #!/bin/bash
 
-if pgrep -f "gammastep.*-O 1500" >/dev/null; then
+STATE_FILE="/tmp/gammastep-temp"
+
+if [[ -f "$STATE_FILE" ]] && [[ "$(cat "$STATE_FILE")" == "1500" ]]; then
     pkill gammastep 2>/dev/null
     gammastep -O 2000 &
+    echo "2000" > "$STATE_FILE"
     echo "Switched to 2000K"
 else
     pkill gammastep 2>/dev/null
     gammastep -O 1500 &
+    echo "1500" > "$STATE_FILE"
     echo "Switched to 1500K"
 fi
+
