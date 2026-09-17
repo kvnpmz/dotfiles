@@ -1,8 +1,33 @@
-#!/usr/bin/env bash
+#!/usr/bin/env lua
 
-~/.config/creek/bar.lua | creek \
-  -hg 50 \
-  -fn "Ubuntu Sans Mono:size=24:weight=bold" \
-  -nf "0xffa500" \
-  -nb "0x231f1d" 2> /tmp/creek_leak_report.txt
+local fifo = "/tmp/creek_in"
+local bar = os.getenv("HOME") .. "/.config/creek/bar"
+local contexts = { "browser", "terminal", "files", "general" }
+
+os.remove(fifo)
+os.execute("mkfifo " .. fifo)
+
+local bar_pid = io.popen("sh -c '" .. bar .. " > " .. fifo .. " & echo $!'"):read("*l")
+
+local creek = io.popen([[
+    creek -hg 50 \
+      -fn "Ubuntu Sans Mono:size=24:weight=bold" \
+      -nf "0xffa500" \
+      -nb "0x231f1d" \
+      < ]] .. fifo .. [[ 2> /tmp/creek.log
+]], "r")
+
+for line in creek:lines() do
+    local index = tonumber(line:match("^click (%d+)$"))
+    local context = index and contexts[index]
+
+    if context then
+        os.execute("argenctl context switch " .. context)
+    end
+end
+
+creek:close()
+
+os.execute("kill " .. bar_pid .. " 2>/dev/null")
+os.remove(fifo)
 

@@ -1,0 +1,27 @@
+#!/usr/bin/env lua
+
+local handle = io.popen("find . -maxdepth 1 -type f -name 'diff_chunk_a*' -print | sort")
+
+for filename in handle:lines() do
+    print("Copying: " .. filename)
+
+    -- hcat the file and pipe it to cpy
+    os.execute("hcat " .. string.format("%q", filename) .. " | cpy")
+
+    -- Wait for confirmation before proceeding
+    while true do
+        io.write("Type 'next' to continue: ")
+        io.flush()
+
+        local input = io.read("*l")
+
+        if input == "next" then
+            break
+        end
+    end
+end
+
+handle:close()
+
+print("Done.")
+
