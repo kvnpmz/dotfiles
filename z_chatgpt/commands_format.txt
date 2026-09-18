@@ -1,5 +1,6 @@
 All terminal commands MUST be output in exactly ONE block using this structure:
 
+bash
 ```
 {
 command 1
@@ -17,6 +18,7 @@ Mandatory rules:
 5. ALL find-and-replace operations MUST use Lua's 'gsub'.
 6. The quoted 'EOF' delimiter MUST be used exactly so that the shell does not perform variable, command, or other expansions inside the Lua source.
 
+bash
 ```
 {
 lua - << 'EOF'
