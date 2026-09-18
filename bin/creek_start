@@ -11,10 +11,10 @@ local bar_pid = io.popen("sh -c '" .. bar .. " > " .. fifo .. " & echo $!'"):rea
 
 local creek = io.popen([[
     creek -hg 50 \
-      -fn "Ubuntu Sans Mono:size=24:weight=bold" \
-      -nf "0xffa500" \
-      -nb "0x231f1d" \
-      < ]] .. fifo .. [[ 2> /tmp/creek.log
+    -fn "Ubuntu Sans Mono:size=24:weight=bold" \
+    -nf "0xffa500" \
+    -nb "0x231f1d" \
+    < ]] .. fifo .. [[ 2> /tmp/creek.log
 ]], "r")
 
 for line in creek:lines() do

@@ -1,23 +1,18 @@
 #!/usr/bin/env lua
 
+local home = os.getenv("HOME")
+package.path = package.path .. ";" .. home .. "/.config/creek/?.lua"
+
+local actions = require("modules.actions")
+
 local rune = arg[1]
-if not rune then os.exit(1) end
 
-local actions = {
-    ["󰐥"] = "/home/kevin/bin/power_menu &",
-
-    ["F"] = "/home/kevin/bin/timezone_change &",
-    ["A"] = "/home/kevin/bin/timezone_change &",
-    ["B"] = "/home/kevin/bin/timezone_change &",
-    
-    ["󰕾"] = "wpctl set-mute @DEFAULT_SINK@ toggle &",
-    ["󰝟"] = "wpctl set-mute @DEFAULT_SINK@ toggle &",
-    
-    ["󰯄"] = "/home/kevin/bin/vpn &",
-    ["󱎘"] = "/home/kevin/bin/vpn &",
-}
-
-if actions[rune] then
-    os.execute(actions[rune])
+if not rune then
+    os.exit(1)
 end
 
+local command = actions.click[rune]
+
+if command then
+    os.execute(command)
+end
