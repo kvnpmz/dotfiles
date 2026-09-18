@@ -2,3 +2,6 @@
 /run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=12.30
 /run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=15.41
 /run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=16.04
+/run/media/kevin/Storage/library/music/The Byrds/Turn! Turn! Turn!/Turn! Turn! Turn! (To Everything There Is A Season).mp3	audio-track=1	codec=mp3	position=65.33
+/run/media/kevin/Storage/library/music/The Byrds/Turn! Turn! Turn!/Turn! Turn! Turn! (To Everything There Is A Season).mp3	audio-track=1	codec=mp3	position=69.18
+/run/media/kevin/Storage/library/music/Imagine Dragons/Night Visions/Demons.mp3	audio-track=1	codec=mp3	position=154.64

@@ -1,13 +1,38 @@
 #!/usr/bin/env lua
 
+local home = os.getenv("HOME")
 local fifo = "/tmp/creek_in"
-local bar = os.getenv("HOME") .. "/.config/creek/bar"
+local bar = home .. "/.config/creek/bar"
 local contexts = { "browser", "terminal", "files", "general" }
+package.path = package.path .. ";" .. home .. "/.config/creek/?.lua"
+local actions = require("modules.actions")
 
 os.remove(fifo)
 os.execute("mkfifo " .. fifo)
 
 local bar_pid = io.popen("sh -c '" .. bar .. " > " .. fifo .. " & echo $!'"):read("*l")
+
+local function process_line(line)
+    local index = tonumber(line:match("^click (%d+)$"))
+    if index and contexts[index] then
+        os.execute("argenctl context switch " .. contexts[index])
+        return
+    end
+
+    local rune = line:match("^status (.+)$")
+    if rune and actions.click[rune] then
+        os.execute(actions.click[rune])
+        return
+    end
+
+    local scroll_rune, direction = line:match("^scroll (.+):(.+)$")
+    local scroll_key = scroll_rune and direction and (scroll_rune .. ":" .. direction)
+    local scroll_cmd = scroll_key and actions.scroll[scroll_key]
+
+    if scroll_cmd then
+        os.execute(scroll_cmd)
+    end
+end
 
 local creek = io.popen([[
     creek -hg 50 \
@@ -18,12 +43,7 @@ local creek = io.popen([[
 ]], "r")
 
 for line in creek:lines() do
-    local index = tonumber(line:match("^click (%d+)$"))
-    local context = index and contexts[index]
-
-    if context then
-        os.execute("argenctl context switch " .. context)
-    end
+    process_line(line)
 end
 
 creek:close()
