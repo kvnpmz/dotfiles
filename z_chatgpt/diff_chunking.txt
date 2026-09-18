@@ -1,5 +1,5 @@
 { git diff upstream/main > /tmp/full_diff.patch;
-#grep -i -C 3 -E "alloc|free|defer|destroy|leak|arena" /tmp/full_diff.patch > /tmp/filtered_diff.patch;
-#split -b 4096 /tmp/filtered_diff.patch /tmp/diff_chunk_; } | cpy
-split -b 4096 /tmp/full_diff.patch /tmp/diff_chunk_; } | cpy
+grep -i -C 3 -E "alloc|free|defer|destroy|leak|arena" /tmp/full_diff.patch > /tmp/filtered_diff.patch;
+split -b 8192 /tmp/filtered_diff.patch /tmp/diff_chunk_; } | cpy
+#split -b 8192 /tmp/full_diff.patch /tmp/diff_chunk_; } | cpy
 

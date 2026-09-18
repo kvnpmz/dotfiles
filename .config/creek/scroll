@@ -1,17 +1,19 @@
 #!/usr/bin/env lua
 
-local rune, direction = arg[1], arg[2]
-if not rune or not direction then os.exit(1) end
+local home = os.getenv("HOME")
+package.path = package.path .. ";" .. home .. "/.config/creek/?.lua"
 
-local actions = {
-    ["󰕾:up"]   = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'",
-    ["󰕾:down"] = "wpctl set-volume @DEFAULT_SINK@ '5%-'",
-    
-    ["󰃠:up"]    = "brightnessctl set +5%",
-    ["󰃠:down"]  = "brightnessctl set 5%-",
-}
+local actions = require("modules.actions")
 
-local cmd = actions[rune .. ":" .. direction]
-if cmd then
-    os.execute(cmd)
+local rune = arg[1]
+local direction = arg[2]
+
+if not rune or not direction then
+    os.exit(1)
+end
+
+local command = actions.scroll[rune .. ":" .. direction]
+
+if command then
+    os.execute(command)
 end

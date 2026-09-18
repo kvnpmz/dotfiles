@@ -1,5 +1,9 @@
 #!/bin/sh
 
+export GOOGLE_API_KEY="no"
+export GOOGLE_DEFAULT_CLIENT_ID="no"
+export GOOGLE_DEFAULT_CLIENT_SECRET="no"
+
 argenctl context switch general
 chromium --app=https://shellshock.io >/dev/null 2>&1 &
 
