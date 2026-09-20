@@ -6,7 +6,7 @@ bash
 command 1
 command 2
 command 3
-} 2>&1 | cpy
+} 2>&1 | wl-copy
 ```
 
 Mandatory rules:
@@ -15,14 +15,19 @@ Mandatory rules:
 2. The closing '} 2>&1', and '| cpy' MUST appear together on the final line, immediately after the last command.
 3. NEVER split commands across multiple blocks.
 4. NEVER provide terminal commands piecemeal outside this block.
-5. ALL find-and-replace operations MUST use Lua's 'gsub'.
+5. ALL find-and-replace operations MUST use Lua heredoc.
 6. The quoted 'EOF' delimiter MUST be used exactly so that the shell does not perform variable, command, or other expansions inside the Lua source.
 
 bash
 ```
 {
 lua - << 'EOF'
+local function safeReplace(subject, target, replacement)
+    local safeTarget = target:gsub("(%W)", "%%%1")
+    local safeRepl = replacement:gsub("%%", "%%%%")
+    return subject:gsub(safeTarget, safeRepl)
+end
 EOF
-} 2>&1 | cpy
+} 2>&1 | wl-copy
 ```
 

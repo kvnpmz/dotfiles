@@ -9,7 +9,7 @@ function M.get()
             "tags " + ([
                 $names[] as $n |
                 (.[] | select(.name == $n)) |
-                (if .current then "*" else "" end)
+                (if .current then "*" else "" end) 
             ] | join(","))
         '
     ]])
@@ -22,3 +22,4 @@ function M.get()
 end
 
 return M
+

@@ -19,8 +19,8 @@
         .{
             .keymap = .{
                 .options = .{
-                    .layout = "us,il,gr",
-                    .variant = "intl,,",
+                    .layout = "us,us,il,gr",
+                    .variant = ",intl,,",
                     .options = "grp:win_space_toggle",
                 },
             },

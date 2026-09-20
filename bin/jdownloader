@@ -1,6 +1,8 @@
 #!/bin/sh
 
-argenctl context switch general
+export GOOGLE_API_KEY="no"
+export GOOGLE_DEFAULT_CLIENT_ID="no"
+export GOOGLE_DEFAULT_CLIENT_SECRET="no"
 
 if [ "$(docker ps -aq -f name=jdownloader-2)" ]; then
     docker start jdownloader-2
@@ -18,5 +20,6 @@ fi
 
 sleep 4
 
+argenctl context switch general
 chromium --app=http://localhost:5800/ >/dev/null 2>&1 &
 
