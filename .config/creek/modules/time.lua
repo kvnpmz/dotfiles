@@ -7,30 +7,39 @@ local cached_world_time = nil
 local cached_date_str = nil
 
 function M.update(current_time)
-    if current_time ~= last_update then
-        cached_world_time = helper.command_line(
-            "/home/kevin/bin/worldclock 2>/dev/null"
+    if current_time == last_update then
+        return cached_world_time, cached_date_str
+    end
+
+    local worldclock = helper.command_line(
+        "/home/kevin/bin/worldclock 2>/dev/null"
+    )
+
+    local world_time, city_name, world_date
+
+    if worldclock and worldclock ~= "" then
+        world_time, city_name, world_date =
+            worldclock:match("^([^|]+)|([^|]+)|(.+)$")
+    end
+
+    if world_time and city_name and world_date then
+        cached_world_time = world_time .. " " .. city_name
+
+        local padding = math.max(
+            0,
+            44 - helper.display_width(world_date)
         )
 
-        if not cached_world_time or cached_world_time == "" then
-            cached_world_time = os.date("%H:%M")
-        end
-
-        local raw_date = helper.command_line(
-            "date +'%A, %d %B' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2)); print}'"
-        ) or os.date("%A, %d %B")
-
-        local display_width = helper.display_width(raw_date)
-        local date_width = 40
-        local padding_needed = math.max(0, date_width - display_width)
-
-        cached_date_str =
-            string.rep(" ", padding_needed) .. raw_date
-
-        last_update = current_time
+        cached_date_str = string.rep(" ", padding) .. world_date
+    else
+        cached_world_time = os.date("%H:%M:%S")
+        cached_date_str = os.date("%A, %d %B %Y")
     end
+
+    last_update = current_time
 
     return cached_world_time, cached_date_str
 end
 
 return M
+

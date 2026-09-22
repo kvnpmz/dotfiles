@@ -23,3 +23,4 @@ end
 
 return M
 
+                -- (if .current then "*xa" else "" end) 

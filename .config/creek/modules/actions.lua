@@ -2,10 +2,8 @@ local M = {}
 
 M.click = {
     ["󰐥"] = "/home/kevin/bin/power_menu &",
-
-    ["F"] = "/home/kevin/bin/timezone_change &",
-    ["A"] = "/home/kevin/bin/timezone_change &",
-    ["B"] = "/home/kevin/bin/timezone_change &",
+ 
+    ["󰖟"] = "/home/kevin/bin/timezone_change &",
 
     ["󰕾"] = "wpctl set-mute @DEFAULT_SINK@ toggle &",
     ["󰝟"] = "wpctl set-mute @DEFAULT_SINK@ toggle &",

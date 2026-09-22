@@ -9,7 +9,14 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 vim.filetype.add({
-    extension = { tl = "teal" }
+    extension = { tl = "teal" },
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "teal",
+    callback = function()
+        vim.cmd("runtime! indent/lua.vim")
+    end,
 })
 
 vim.api.nvim_create_autocmd("FileType", {

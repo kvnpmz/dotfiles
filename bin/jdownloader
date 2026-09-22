@@ -4,6 +4,14 @@ export GOOGLE_API_KEY="no"
 export GOOGLE_DEFAULT_CLIENT_ID="no"
 export GOOGLE_DEFAULT_CLIENT_SECRET="no"
 
+if ! sudo sv status docker 2>/dev/null | grep -q '^run:'; then
+    sudo sv up docker
+fi
+
+while ! docker info >/dev/null 2>&1; do
+    sleep 2
+done
+
 if [ "$(docker ps -aq -f name=jdownloader-2)" ]; then
     docker start jdownloader-2
 else
@@ -14,11 +22,11 @@ else
       -e DISPLAY_WIDTH=1024 \
       -e DISPLAY_HEIGHT=576 \
       -p 5800:5800 \
-      --restart unless-stopped \
+      --restart no \
       jlesage/jdownloader-2
 fi
 
-sleep 4
+sleep 2
 
 argenctl context switch general
 chromium --app=http://localhost:5800/ >/dev/null 2>&1 &

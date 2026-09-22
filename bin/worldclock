@@ -1,23 +1,36 @@
-#!/usr/bin/env bash
+#!/usr/bin/env lua
 
-cities=(
-    "FLL|America/New_York"
-    "AUS|America/Chicago"
-    "BUE|America/Argentina/Buenos_Aires"
+local cities = {
+    { "󰖟  FL", "America/New_York" },
+    { "󰖟  TX", "America/Chicago" },
+    { "󰖟  BA", "America/Argentina/Buenos_Aires" },
+}
+
+local state_file = "/tmp/worldclock_state"
+
+local index = 0
+
+local file = io.open(state_file, "r")
+if file then
+    index = tonumber(file:read("*l")) or 0
+    file:close()
+end
+
+local city = cities[index + 1] or cities[1]
+local city_name = city[1]
+local timezone = city[2]
+
+local command = string.format(
+    "TZ='%s' date '+%%H:%%M:%%S|%s|%%A, %%d %%B %%Y'",
+    timezone,
+    city_name
 )
 
-state_file="/tmp/worldclock_state"
+local pipe = io.popen(command)
+local output = pipe:read("*l")
+pipe:close()
 
-if [ -f "$state_file" ]; then
-    index=$(cat "$state_file")
-else
-    index=0
-fi
-
-current_entry="${cities[$index]}"
-city_name="${current_entry%%|*}"
-tz="${current_entry##*|}"
-
-current_time=$(TZ="$tz" date '+%Y %H:%M:%S')
-echo "$current_time $city_name"
+if output then
+    print(output)
+end
 

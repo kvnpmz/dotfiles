@@ -20,3 +20,7 @@ function M.get(current_time)
 end
 
 return M
+--[[
+            and " 󰯄 "
+            or " 󱎘 "
+            --]]
