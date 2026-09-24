@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 
 argenctl context switch general
 argenctl layout switch 2x2
@@ -103,13 +103,14 @@ run_source() {
 
     case "$source" in
         https://*)
-            qbg mpv \
+            mpv \
                 --title="$title" \
                 --loop-file=inf \
                 --video-zoom=0.25 \
                 --script="$HOME/.config/mpv/manual_scripts/rotate_auto.lua" \
                 --script-opts="rotate_auto-transpose=$TRANSPOSE" \
-                "$source"
+                "$source" \
+                >/dev/null 2>&1 </dev/null
             ;;
 
         img:*)

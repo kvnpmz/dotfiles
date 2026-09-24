@@ -64,7 +64,7 @@ A categorized reference for flat scripts residing in `~/bin`.
 * **`hcat`** - Head/tail wrapper tool.
 * **`l`** - Colorized `ls` shorthand.
 * **`rm`** - Safe removal wrapper moving files to Gio trash.
-* **`vi`** - Neovim execution wrapper.
+* **`v`** - Neovim execution wrapper.
 * **`cpln` / `cpy`** - Clipboard copy shortcuts via `wl-copy`.
 * **`e1s.sh`** - Zenity language picker phrase copier.
 * **`firefox_profile.sh` / `firefox-ram-start`** - Specialized Firefox profile launchers.
