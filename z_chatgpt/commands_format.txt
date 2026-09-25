@@ -1,7 +1,6 @@
 All terminal commands MUST be output in exactly ONE block using this structure:
 
-bash
-```
+```bash
 {
 command 1
 command 2
@@ -18,8 +17,7 @@ Mandatory rules:
 5. ALL find-and-replace operations MUST use Lua heredoc.
 6. The quoted 'EOF' delimiter MUST be used exactly so that the shell does not perform variable, command, or other expansions inside the Lua source.
 
-bash
-```
+```bash
 {
 lua - << 'EOF'
 local function safeReplace(subject, target, replacement)
