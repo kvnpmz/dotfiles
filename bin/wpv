@@ -1,187 +1,182 @@
-#!/bin/env bash
+#!/usr/bin/env lua
 
-argenctl context switch general
-argenctl layout switch 2x2
+local CONTROL = "/home/kevin/bin/wpv_control.sh"
 
-WPV_PGID="$(ps -o pgid= -p "$$" | tr -d ' ')"
+local function die(message)
+    io.stderr:write("Error: " .. message .. "\n")
+    os.exit(1)
+end
 
-PANES="${PANES:-3}"
-TRANSPOSE="${TRANSPOSE:-2}"
+local function shell_quote(value)
+    return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
 
-LEFT=
-CENTER=
-RIGHT=
-FOURTH=
-SOURCE_COUNT=0
+local function is_directory(path)
+    local ok = os.execute(
+        "test -d " .. shell_quote(path) .. " >/dev/null 2>&1"
+    )
 
-while [ $# -gt 0 ]; do
-    case "$1" in
-        -p|--panes)
-            [ $# -ge 2 ] || {
-                echo "Error: $1 requires a value" >&2
-                            exit 1
-            }
-        PANES="$2"
-        shift 2
-        ;;
+    return ok == true or ok == 0
+end
 
-    -t|--transpose)
-        [ $# -ge 2 ] || {
-            echo "Error: $1 requires a value" >&2
-                    exit 1
-        }
-    TRANSPOSE="$2"
-    shift 2
-    ;;
+local panes = os.getenv("PANES")
+if panes == nil or panes == "" then
+    panes = "3"
+end
 
---)
-    shift
-    while [ $# -gt 0 ]; do
-        SOURCE_COUNT=$((SOURCE_COUNT + 1))
-        case "$SOURCE_COUNT" in
-            1) LEFT="$1" ;;
-            2) CENTER="$1" ;;
-            3) RIGHT="$1" ;;
-            4) FOURTH="$1" ;;
-            *)
-                echo "Error: maximum 4 sources" >&2
-                exit 1
-                ;;
-        esac
-        shift
-    done
-    ;;
+local transpose = os.getenv("TRANSPOSE")
+if transpose == nil or transpose == "" then
+    transpose = "2"
+end
 
-*)
-    SOURCE_COUNT=$((SOURCE_COUNT + 1))
-    case "$SOURCE_COUNT" in
-        1) LEFT="$1" ;;
-        2) CENTER="$1" ;;
-        3) RIGHT="$1" ;;
-        4) FOURTH="$1" ;;
-        *)
-            echo "Error: maximum 4 sources" >&2
-            exit 1
-            ;;
-    esac
-    shift
-    ;;
-esac
-done
+local sources = {}
 
-case "$PANES" in
-    3|4)
-        ;;
-    *)
-        echo "Error: panes must be 3 or 4 (got: $PANES)" >&2
-        exit 1
-        ;;
-esac
+local i = 1
 
-case "$TRANSPOSE" in
-    1|2)
-        ;;
-    *)
-        echo "Error: transpose must be 1 or 2 (got: $TRANSPOSE)" >&2
-        exit 1
-        ;;
-esac
+while i <= #arg do
+    local value = arg[i]
 
-LEFT="${LEFT:-.}"
-CENTER="${CENTER:-$LEFT}"
-RIGHT="${RIGHT:-$LEFT}"
-FOURTH="${FOURTH:-$LEFT}"
+    if value == "-p" or value == "--panes" then
+        if not arg[i + 1] then
+            die(value .. " requires a value")
+        end
 
-if [ "$PANES" -eq 3 ] && [ "$SOURCE_COUNT" -gt 3 ]; then
-    echo "Error: maximum 3 sources" >&2
-    exit 1
-fi
+        panes = arg[i + 1]
+        i = i + 2
 
-run_source() {
-    title="$1"
-    source="$2"
+    elseif value == "-t" or value == "--transpose" then
+        if not arg[i + 1] then
+            die(value .. " requires a value")
+        end
 
-    case "$source" in
-        https://*)
-            mpv \
-                --title="$title" \
-                --loop-file=inf \
-                --video-zoom=0.25 \
-                --script="$HOME/.config/mpv/manual_scripts/rotate_auto.lua" \
-                --script-opts="rotate_auto-transpose=$TRANSPOSE" \
-                "$source" \
-                >/dev/null 2>&1 </dev/null
-            ;;
+        transpose = arg[i + 1]
+        i = i + 2
 
-        img:*)
-            source="${source#img:}"
+    elseif value == "--" then
+        i = i + 1
 
-            if [ -d "$source" ]; then
-                imix \
-                    --title "$title" \
-                    -d "$source" \
-                    --transpose "$TRANSPOSE"
-            else
-                echo "Error: image directory does not exist: $source" >&2
-                exit 1
-            fi
-            ;;
+        while i <= #arg do
+            if #sources >= 4 then
+                die("maximum 4 sources")
+            end
 
-        mix:*)
-            source="${source#mix:}"
+            sources[#sources + 1] = arg[i]
+            i = i + 1
+        end
 
-            mix \
-                --title "$title" \
-                -d "$source" \
-                --transpose "$TRANSPOSE"
-            ;;
+    else
+        if #sources >= 4 then
+            die("maximum 4 sources")
+        end
 
-        *)
-            if [ -d "$source" ]; then
-                vmix \
-                    --title "$title" \
-                    -d "$source" \
-                    --transpose "$TRANSPOSE"
-            else
-                echo "Error: source must be a directory or https:// URL: $source" >&2
-                exit 1
-            fi
-            ;;
-    esac
+        sources[#sources + 1] = value
+        i = i + 1
+    end
+end
+
+if panes ~= "3" and panes ~= "4" then
+    die("panes must be 3 or 4 (got: " .. panes .. ")")
+end
+
+if transpose ~= "1" and transpose ~= "2" then
+    die("transpose must be 1 or 2 (got: " .. transpose .. ")")
+end
+
+if panes == "3" and #sources > 3 then
+    die("maximum 3 sources")
+end
+
+local left   = sources[1] or "."
+local center = sources[2] or left
+local right  = sources[3] or left
+local fourth = sources[4] or left
+
+local function viewer_command(title, source)
+
+    if source:match("^https://") then
+        local script =
+            os.getenv("HOME")
+            .. "/.config/mpv/manual_scripts/rotate_auto.lua"
+
+        return table.concat({
+            "mpv",
+            "--title=" .. shell_quote(title),
+            "--loop-file=inf",
+            "--video-zoom=0.25",
+            "--script=" .. shell_quote(script),
+            "--script-opts="
+                .. shell_quote("rotate_auto-transpose=" .. transpose),
+            shell_quote(source),
+        }, " ")
+    end
+
+    if source:match("^img:") then
+        local directory = source:sub(5)
+
+        if not is_directory(directory) then
+            die("image directory does not exist: " .. directory)
+        end
+
+        return table.concat({
+            "imix",
+            "--title", shell_quote(title),
+            "-d", shell_quote(directory),
+            "--transpose", shell_quote(transpose),
+        }, " ")
+    end
+
+    if source:match("^mix:") then
+        local directory = source:sub(5)
+
+        return table.concat({
+            "mix",
+            "--title", shell_quote(title),
+            "-d", shell_quote(directory),
+            "--transpose", shell_quote(transpose),
+        }, " ")
+    end
+
+    if not is_directory(source) then
+        die(
+            "source must be a directory or https:// URL: "
+            .. source
+        )
+    end
+
+    return table.concat({
+        "vmix",
+        "--title", shell_quote(title),
+        "-d", shell_quote(source),
+        "--transpose", shell_quote(transpose),
+    }, " ")
+end
+
+local commands = {
+    viewer_command("wpv-left", left),
+    viewer_command("wpv-center", center),
+    viewer_command("wpv-right", right),
 }
 
-cleanup() {
-    trap - INT TERM EXIT
+if panes == "4" then
+    commands[#commands + 1] =
+        viewer_command("wpv-fourth", fourth)
+end
 
-    kill -TERM -- "-$WPV_PGID" 2>/dev/null
+local command = shell_quote(CONTROL)
 
-    sleep 1
+for _, viewer in ipairs(commands) do
+    command = command .. " " .. shell_quote(viewer)
+end
 
-    kill -KILL -- "-$WPV_PGID" 2>/dev/null
+local ok, exit_type, exit_code = os.execute(command)
 
-    exit 0
-}
+if ok == true or ok == 0 then
+    os.exit(0)
+end
 
-revert_layout() {
-    argenctl context switch general
-    argenctl layout switch stacktile
-    argenctl context switch terminal
-    cleanup
-}
+if exit_type == "exit" and exit_code then
+    os.exit(exit_code)
+end
 
-trap revert_layout INT
-trap cleanup TERM EXIT
-
-run_source wpv-left "$LEFT" &
-sleep 0.05
-run_source wpv-center "$CENTER" &
-sleep 0.05
-run_source wpv-right "$RIGHT" &
-sleep 0.05
-
-if [ "$PANES" -eq 4 ]; then
-    run_source wpv-fourth "$FOURTH" &
-fi
-
-wait
+os.exit(1)
 

@@ -1,15 +1,11 @@
 /run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=158.17
-/run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=12.30
-/run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=15.41
 /run/media/kevin/Storage/library/music/Mac Miller/Macadelic/Aliens Fighting Robots.mp3	audio-track=1	codec=mp3	position=16.04
-/run/media/kevin/Storage/library/music/The Byrds/Turn! Turn! Turn!/Turn! Turn! Turn! (To Everything There Is A Season).mp3	audio-track=1	codec=mp3	position=65.33
-/run/media/kevin/Storage/library/music/The Byrds/Turn! Turn! Turn!/Turn! Turn! Turn! (To Everything There Is A Season).mp3	audio-track=1	codec=mp3	position=69.18
 /run/media/kevin/Storage/library/music/Imagine Dragons/Night Visions/Demons.mp3	audio-track=1	codec=mp3	position=154.64
 /run/media/kevin/Storage/library/music/Mac Miller/K.I.D.S/The Spins.mp3	audio-track=1	codec=mp3	position=139.56
-/run/media/kevin/Storage/library/music/Mac Miller/K.I.D.S/The Spins.mp3	audio-track=1	codec=mp3	position=140.70
 /run/media/kevin/Storage/library/music/Iron & Wine/Our Endless Numbered Days/Sodom, South Georgia.mp3	audio-track=1	codec=mp3	position=57.48
 /run/media/kevin/Storage/library/music/Delta Spirit/Delta Spirit/Money Saves.mp3	audio-track=1	codec=mp3	position=113.47
 /run/media/kevin/Storage/library/music/blink-182/Take Off Your Pants And Jacket/Stay Together For The Kids.mp3	audio-track=1	codec=mp3	position=44.90
-/run/media/kevin/Storage/library/music/blink-182/Take Off Your Pants And Jacket/Stay Together For The Kids.mp3	audio-track=1	codec=mp3	position=45.23
 /run/media/kevin/Storage/library/music/The Byrds/Turn! Turn! Turn!/Turn! Turn! Turn! (To Everything There Is A Season).mp3	audio-track=1	codec=mp3	position=65.23
-/run/media/kevin/Storage/library/music/The Byrds/Turn! Turn! Turn!/Turn! Turn! Turn! (To Everything There Is A Season).mp3	audio-track=1	codec=mp3	position=65.68
+/run/media/kevin/Storage/library/music/Delta Spirit/Delta Spirit/Money Saves.mp3	audio-track=1	codec=mp3	position=109.24
+/run/media/kevin/Storage/library/music/Foghat/Fool For The City/Slow Ride.mp3	audio-track=1	codec=mp3	position=429.56
+/run/media/kevin/Storage/library/music/Oasis/Dig Out Your Soul/To Be Where There's Life.mp3	audio-track=1	codec=mp3	position=261.62

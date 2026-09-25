@@ -92,3 +92,4 @@ mpv \
     --script="$HOME/.config/mpv/manual_scripts/rotate_image_auto.lua" \
     --script-opts="rotate_image_auto-transpose=$TRANSPOSE" \
     &>/dev/null
+
