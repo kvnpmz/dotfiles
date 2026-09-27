@@ -20,7 +20,10 @@ local keyboard = require("modules.keyboard")
 
 os.setlocale("", "time")
 
+--[[
 local SPACER = "              "
+--]]
+local SPACER = "            "
 
 local function nz(value)
     return value or ""

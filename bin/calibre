@@ -1,0 +1,4 @@
+#!/bin/sh
+
+exec env QT_SCALE_FACTOR=2 /usr/bin/calibre "$@"
+

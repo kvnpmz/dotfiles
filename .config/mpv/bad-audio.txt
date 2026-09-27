@@ -9,3 +9,6 @@
 /run/media/kevin/Storage/library/music/Delta Spirit/Delta Spirit/Money Saves.mp3	audio-track=1	codec=mp3	position=109.24
 /run/media/kevin/Storage/library/music/Foghat/Fool For The City/Slow Ride.mp3	audio-track=1	codec=mp3	position=429.56
 /run/media/kevin/Storage/library/music/Oasis/Dig Out Your Soul/To Be Where There's Life.mp3	audio-track=1	codec=mp3	position=261.62
+/run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=150.19
+/run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=151.48
+/run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=152.35
