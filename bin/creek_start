@@ -7,21 +7,38 @@ local contexts = { "browser", "terminal", "files", "general" }
 package.path = package.path .. ";" .. home .. "/.config/creek/?.lua"
 local actions = require("modules.actions")
 
+os.execute("pkill -f 'argenctl context list --json --subscribe' 2>/dev/null")
+
 os.remove(fifo)
 os.execute("mkfifo " .. fifo)
 
 local bar_pid = io.popen("sh -c '" .. bar .. " > " .. fifo .. " & echo $!'"):read("*l")
 
+os.execute([[
+    argenctl context list --json --subscribe | \
+    stdbuf -oL jq -rc '
+        ["browser", "terminal", "files", "general"] as $order
+        | (reduce .[] as $item ({}; .[$item.name] = $item.current)) as $map
+        | "tags " + ($order | map(if $map[.] then "" else "" end) | join(","))
+    ' | while read -r line; do
+        echo "$line" > /tmp/creek_context.tmp && mv /tmp/creek_context.tmp /tmp/creek_context
+    done &
+]])
+
+local function async(cmd)
+    os.execute("setsid sh -c " .. string.format("%q", cmd) .. " > /dev/null 2>&1 &")
+end
+
 local function process_line(line)
     local index = tonumber(line:match("^click (%d+)$"))
     if index and contexts[index] then
-        os.execute("argenctl context switch " .. contexts[index])
+        async("argenctl context switch " .. contexts[index])
         return
     end
 
     local rune = line:match("^status (.+)$")
     if rune and actions.click[rune] then
-        os.execute(actions.click[rune])
+        async(actions.click[rune])
         return
     end
 
@@ -30,7 +47,7 @@ local function process_line(line)
     local scroll_cmd = scroll_key and actions.scroll[scroll_key]
 
     if scroll_cmd then
-        os.execute(scroll_cmd)
+        async(scroll_cmd)
     end
 end
 
