@@ -1,25 +1,17 @@
 local M = {}
 
-local helper = require("helpers")
+local cached_context = ""
 
 function M.get()
-    local tags_line = helper.command([[
-        argenctl context list --json | jq -r '
-            ["browser", "terminal", "files", "general"] as $names |
-            "tags " + ([
-                $names[] as $n |
-                (.[] | select(.name == $n)) |
-                (if .current then "*" else "" end) 
-            ] | join(","))
-        '
-    ]])
-
-    if not tags_line or tags_line == "" then
-        return "tags argen_offline"
+    local f = io.open("/tmp/argen_contexts", "r")
+    if f then
+        local val = (f:read("*all") or ""):gsub("%s+$", "")
+        f:close()
+        if val ~= "" then
+            cached_context = val
+        end
     end
-
-    return tags_line:gsub("%s+$", "")
+    return cached_context
 end
 
 return M
-

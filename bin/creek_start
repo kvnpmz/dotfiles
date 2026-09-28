@@ -7,26 +7,28 @@ local contexts = { "browser", "terminal", "files", "general" }
 package.path = package.path .. ";" .. home .. "/.config/creek/?.lua"
 local actions = require("modules.actions")
 
-os.execute("pkill -f 'argenctl context list --json --subscribe' 2>/dev/null")
-
 os.remove(fifo)
 os.execute("mkfifo " .. fifo)
 
 local bar_pid = io.popen("sh -c '" .. bar .. " > " .. fifo .. " & echo $!'"):read("*l")
 
-os.execute([[
-    argenctl context list --json --subscribe | \
+local context_cmd = [=[
+    argenctl context list --json --subscribe |
     stdbuf -oL jq -rc '
         ["browser", "terminal", "files", "general"] as $order
         | (reduce .[] as $item ({}; .[$item.name] = $item.current)) as $map
         | "tags " + ($order | map(if $map[.] then "" else "" end) | join(","))
     ' | while read -r line; do
-        echo "$line" > /tmp/creek_context.tmp && mv /tmp/creek_context.tmp /tmp/creek_context
-    done &
-]])
+        echo "$line" > /tmp/argen_contexts.tmp && mv /tmp/argen_contexts.tmp /tmp/argen_contexts
+    done
+]=]
+
+local function shellQuote(s)
+    return "'" .. s:gsub("'", "'\"'\"'") .. "'"
+end
 
 local function async(cmd)
-    os.execute("setsid sh -c " .. string.format("%q", cmd) .. " > /dev/null 2>&1 &")
+    os.execute("setsid sh -c " .. shellQuote(cmd) .. " > /dev/null 2>&1 &")
 end
 
 local function process_line(line)
@@ -50,6 +52,8 @@ local function process_line(line)
         async(scroll_cmd)
     end
 end
+
+async(context_cmd)
 
 local creek = io.popen([[
     creek -hg 50 \

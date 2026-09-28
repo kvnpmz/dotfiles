@@ -87,7 +87,6 @@ function M.split(s, separator)
     return result
 end
 
-
 function M.now()
     return os.time()
 end
@@ -141,7 +140,6 @@ function M.cpu_percent(previous, current)
     return math.floor((used_delta * 100 / total_delta) + 0.5)
 end
 
-
 function M.battery()
     local base = "/sys/class/power_supply/BAT0"
 
@@ -162,7 +160,6 @@ function M.battery()
     }
 end
 
-
 function M.percent(icon, value, width)
     width = width or 3
     return string.format("%s %%%dd%%", icon, width):format(value)
@@ -178,6 +175,23 @@ function M.display_width(s)
     )
 
     return tonumber(output) or #s
+end
+
+local ffi = require("ffi")
+
+ffi.cdef[[
+    struct timespec {
+        long tv_sec;
+        long tv_nsec;
+    };
+    int nanosleep(const struct timespec *req, struct timespec *rem);
+]]
+
+function M.msleep(ms)
+    local req = ffi.new("struct timespec")
+    req.tv_sec = math.floor(ms / 1000)
+    req.tv_nsec = (ms % 1000) * 1000000
+    ffi.C.nanosleep(req, nil)
 end
 
 return M

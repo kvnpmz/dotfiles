@@ -27,7 +27,7 @@ function M.update(current_time)
 
         local padding = math.max(
             0,
-            44 - helper.display_width(world_date)
+            41 - helper.display_width(world_date)
         )
 
         cached_date_str = string.rep(" ", padding) .. world_date

@@ -16,6 +16,11 @@ h.export({
 })
 
 h.start({
+    "dbus-update-activation-environment --all",
+    "/usr/libexec/xdg-desktop-portal-wlr",
+})
+
+h.start({
     "gammastep -O 2000",
     "swaybg -o eDP-1 -i " .. home .. "/Pictures/wallpapers/red.png -m fill",
     "swayidle -w timeout 3600 '/usr/bin/sudo /usr/bin/zzz' before-sleep 'true'",
@@ -79,7 +84,7 @@ h.cmd("argenctl pointer-binding set normal Super BTN_RIGHT resize-window")
 local context_names = { "browser", "terminal", "files", "general" }
 for i, name in ipairs(context_names) do
     h.cmd(
-        "argenctl binding set normal Super %d sh \"argenctl context switch %s && pkill -RTMIN+8 waybar\"",
+        "argenctl binding set normal Super %d sh \"argenctl context switch %s\"",
         i, name
     )
 

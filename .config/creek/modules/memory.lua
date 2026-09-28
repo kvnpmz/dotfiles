@@ -27,7 +27,7 @@ function M.get(current_time)
             if total and available then
                 local used = total - available
                 local used_gb = used / 1048576
-                cached_status = string.format("⇄ %2.0f G", used_gb)
+                cached_status = string.format("⇵ %2.0f G", used_gb)
             else
                 cached_status = ""
             end
