@@ -1,6 +1,6 @@
 local M = {}
 
-local cached_context = ""
+local cached_context = "tags *,,,"
 
 function M.get()
     local f = io.open("/tmp/argen_contexts", "r")

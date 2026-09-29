@@ -17,7 +17,7 @@ local context_cmd = [=[
     stdbuf -oL jq -rc '
         ["browser", "terminal", "files", "general"] as $order
         | (reduce .[] as $item ({}; .[$item.name] = $item.current)) as $map
-        | "tags " + ($order | map(if $map[.] then "" else "" end) | join(","))
+        | "tags " + ($order | map(if $map[.] then "*" else "" end) | join(","))
     ' | while read -r line; do
         echo "$line" > /tmp/argen_contexts.tmp && mv /tmp/argen_contexts.tmp /tmp/argen_contexts
     done

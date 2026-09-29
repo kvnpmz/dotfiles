@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+export QT_SCALE_FACTOR=2
+export LANG=en_US.UTF-8
+
+argenctl context switch general
+exec /usr/bin/obs "$@"
+
