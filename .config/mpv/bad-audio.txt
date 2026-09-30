@@ -12,3 +12,5 @@
 /run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=150.19
 /run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=151.48
 /run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=152.35
+/run/media/kevin/Storage/library/music/Karnivool/Themata/Sewn And Silent.mp3	audio-track=1	codec=mp3	position=158.34
+/run/media/kevin/Storage/library/music/Karnivool/Themata/Sewn And Silent.mp3	audio-track=1	codec=mp3	position=158.74

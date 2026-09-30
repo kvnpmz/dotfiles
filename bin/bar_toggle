@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if pgrep -x creek >/dev/null; then
+    pkill -x creek
+    pkill -f [a]rgenctl
+else
+    qbg "$HOME/bin/creek_start"
+fi

@@ -1,7 +1,6 @@
 local M = {}
 
-local cached_context = "tags *,,,"
-
+local cached_context = "*,,,"
 function M.get()
     local f = io.open("/tmp/argen_contexts", "r")
     if f then
@@ -15,3 +14,4 @@ function M.get()
 end
 
 return M
+

@@ -13,7 +13,7 @@ os.execute("mkfifo " .. fifo)
 local bar_pid = io.popen("sh -c '" .. bar .. " > " .. fifo .. " & echo $!'"):read("*l")
 
 local context_cmd = [=[
-    argenctl context list --json --subscribe |
+    argenctl context list --json --watch |
     stdbuf -oL jq -rc '
         ["browser", "terminal", "files", "general"] as $order
         | (reduce .[] as $item ({}; .[$item.name] = $item.current)) as $map

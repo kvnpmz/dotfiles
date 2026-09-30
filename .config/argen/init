@@ -15,24 +15,17 @@ h.export({
     XDG_SESSION_TYPE = "wayland",
 })
 
-h.cmd("dbus-update-activation-environment --all")
-h.flush()
-
 h.start({
-    "/usr/libexec/xdg-desktop-portal-wlr",
-    "gammastep -O 2000",
     "swaybg -o eDP-1 -i " .. home .. "/Pictures/wallpapers/red.png -m fill",
-    "swayidle -w timeout 3600 '/usr/bin/sudo /usr/bin/zzz' before-sleep 'true'",
-    "mako",
-    home .. "/bin/battery-warning",
-    home .. "/bin/kwim-watcher",
+    "gammastep -O 2000",
 })
-
 
 h.cmd("echo us > " .. home .. "/.keyboard_layout")
 
 h.cmd("argenctl config set cursor-theme \"Yaru\"")
 h.cmd("argenctl config set cursor-size 42")
+
+h.cmd("argenctl config set default-layout monocle")
 
 h.cmd("argenctl config set border-width 0")
 h.cmd("argenctl config set stacktile primary-ratio 0.6")
@@ -48,7 +41,7 @@ h.cmd("argenctl context new files")
 h.cmd("argenctl context new general")
 
 h.cmd("argenctl rule add context --app-id \"Firefox\" browser")
-h.cmd("argenctl rule add context --app-id \"com.mitchellh.ghostty\" terminal")
+h.cmd("argenctl rule add context --app-id \"foot\" terminal")
 h.cmd("argenctl rule add context --app-id \"com.kevin.yazi\" files")
 h.cmd("argenctl rule add context --app-id \"mpv\" general")
 
@@ -56,6 +49,9 @@ h.cmd("argenctl rule add float --app-id \"one.alynx.showmethekey\"")
 
 h.cmd("argenctl pointer-binding set normal Super BTN_LEFT move-window")
 h.cmd("argenctl pointer-binding set normal Super BTN_RIGHT resize-window")
+
+h.cmd("argenctl config set label-font \"Ubuntu Sans Mono:style=Bold:size=24\"")
+h.cmd("argenctl config set label-font-color 0xFFA500")
 
 local context_names = { "browser", "terminal", "files", "general" }
 
@@ -72,7 +68,7 @@ for i, name in ipairs(context_names) do
 end
 
 h.bind_keys({
-    { mode = "normal", key = "Control+Alt T", action = "exec", value = home .. "/.local/bin/ghostty" },
+    { mode = "normal", key = "Control+Alt T", action = "exec", value = "foot" },
     { mode = "normal", key = "Super E", action = "exec", value = home .. "/bin/yazi-start" },
     { mode = "normal", key = "Super W", action = "exec", value = home .. "/bin/firefox-ram-start" },
     { mode = "normal", key = "Super+Shift S", action = "exec", value = home .. "/bin/screenshot" },
@@ -104,19 +100,22 @@ h.bind_keys({
 
 h.flush()
 
+h.cmd("dbus-update-activation-environment --all")
+h.cmd("pkill -f xdg-desktop-portal")
+
+
 h.cmd("argenctl context switch browser")
-
-h.start({
-    home .. "/bin/firefox-ram-start",
-    home .. "/bin/ghostty",
-    home .. "/bin/yazi-start",
-    home .. "/bin/creek_start",
-})
-
-h.start({ "pipewire >/tmp/pipewire.log 2>&1" })
 
 h.start({
     home .. "/bin/start_audio.sh",
     "/usr/local/bin/sunshine >/tmp/sunshine.log 2>&1",
+    "swayidle -w timeout 3600 '/usr/bin/sudo /usr/bin/zzz' before-sleep 'true'",
+    "mako",
+    home .. "/bin/battery-warning",
+    home .. "/bin/kwim-watcher",
+    "foot",
+    home .. "/bin/yazi-start",
+    home .. "/bin/creek_start",
+    home .. "/bin/firefox-ram-start",
 })
 

@@ -2,5 +2,8 @@
 
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
+/usr/bin/pkill -9 -u "$USER" -f "Xwayland|Sunshine|xdg-desktop-portal|pipewire|wireplumber" 2>/dev/null
+/usr/bin/rm -f "/run/user/$(id -u)/wayland-*" 2>/dev/null
+
 exec dbus-run-session river -c argen > /tmp/river-argen.log 2>&1
 
