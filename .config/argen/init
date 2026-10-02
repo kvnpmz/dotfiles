@@ -68,7 +68,7 @@ for i, name in ipairs(context_names) do
 end
 
 h.bind_keys({
-    { mode = "normal", key = "Control+Alt T", action = "exec", value = "foot" },
+    { mode = "normal", key = "Super T", action = "exec", value = "foot" },
     { mode = "normal", key = "Super E", action = "exec", value = home .. "/bin/yazi-start" },
     { mode = "normal", key = "Super W", action = "exec", value = home .. "/bin/firefox-ram-start" },
     { mode = "normal", key = "Super+Shift S", action = "exec", value = home .. "/bin/screenshot" },
@@ -80,42 +80,41 @@ h.bind_keys({
     { mode = "normal", key = "Super+Shift R", action = "exec", value = home .. "/bin/rotate_left" },
     { mode = "normal", key = "Super+Shift E", action = "exec", value = home .. "/bin/power_menu" },
     { mode = "normal", key = "None XF86PowerOff", action = "exec", value = home .. "/bin/power_menu" },
-    { mode = "repeat", key = "None XF86AudioRaiseVolume", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'" },
-    { mode = "repeat", key = "None XF86AudioLowerVolume", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ '5%-'" },
+    { mode = "repeat", key = "None XF86AudioRaiseVolume", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 \"5%+\"" },
+    { mode = "repeat", key = "None XF86AudioLowerVolume", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ \"5%-\"" },
     { mode = "repeat", key = "None XF86AudioMute", action = "sh", value = "wpctl set-mute @DEFAULT_SINK@ toggle" },
-    { mode = "repeat", key = "Super A", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'" },
-    { mode = "repeat", key = "Super Z", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ '5%-'" },
+    { mode = "repeat", key = "Super A", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 \"5%+\"" },
+    { mode = "repeat", key = "Super Z", action = "sh", value = "wpctl set-volume @DEFAULT_SINK@ \"5%-\"" },
     { mode = "repeat", key = "Super X", action = "sh", value = "wpctl set-mute @DEFAULT_SINK@ toggle" },
     { mode = "normal", key = "None XF86MonBrightnessUp", action = "exec", value = "brightnessctl set +5%" },
     { mode = "normal", key = "None XF86MonBrightnessDown", action = "exec", value = "brightnessctl set 5%-" },
     { mode = "repeat", key = "Super M", action = "sh", value = "brightnessctl set +5%" },
     { mode = "repeat", key = "Super N", action = "sh", value = "brightnessctl set 5%-" },
     { mode = "normal", key = "Super Q", action = "window", value = "close" },
-    { mode = "normal", key = "Super J", action = "window", value = "focus next" },
-    { mode = "normal", key = "Super K", action = "window", value = "focus prev" },
-    { mode = "normal", key = "Super+Shift J", action = "window", value = "swap next" },
-    { mode = "normal", key = "Super+Shift K", action = "window", value = "swap prev" },
+    { mode = "normal", key = "Super Tab", action = "window", value = "focus next" },
+    { mode = "normal", key = "Super+Shift Tab", action = "window", value = "focus prev" },
+    { mode = "normal", key = "Super J", action = "window", value = "swap next" },
+    { mode = "normal", key = "Super K", action = "window", value = "swap prev" },
     { mode = "normal", key = "Super B", action = "exec", value = home .. "/bin/bar_toggle" },
 })
 
 h.flush()
 
 h.cmd("dbus-update-activation-environment --all")
-h.cmd("pkill -f xdg-desktop-portal")
-
+h.flush()
 
 h.cmd("argenctl context switch browser")
 
 h.start({
     home .. "/bin/start_audio.sh",
     "/usr/local/bin/sunshine >/tmp/sunshine.log 2>&1",
-    "swayidle -w timeout 3600 '/usr/bin/sudo /usr/bin/zzz' before-sleep 'true'",
+    "swayidle -w timeout 3600 \"/usr/bin/sudo /usr/bin/zzz\" before-sleep \"true\"",
     "mako",
     home .. "/bin/battery-warning",
     home .. "/bin/kwim-watcher",
+    home .. "/bin/firefox-ram-start",
     "foot",
     home .. "/bin/yazi-start",
     home .. "/bin/creek_start",
-    home .. "/bin/firefox-ram-start",
 })
 

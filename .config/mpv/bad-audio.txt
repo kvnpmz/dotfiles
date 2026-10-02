@@ -14,3 +14,9 @@
 /run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=152.35
 /run/media/kevin/Storage/library/music/Karnivool/Themata/Sewn And Silent.mp3	audio-track=1	codec=mp3	position=158.34
 /run/media/kevin/Storage/library/music/Karnivool/Themata/Sewn And Silent.mp3	audio-track=1	codec=mp3	position=158.74
+/run/media/kevin/Storage/library/music/Albert Hammond Jr/Yours To Keep/Blue Skies.mp3	audio-track=1	codec=mp3	position=123.12
+/run/media/kevin/Storage/library/music/Albert Hammond Jr/Yours To Keep/Blue Skies.mp3	audio-track=1	codec=mp3	position=125.99
+/run/media/kevin/Storage/library/music/Oasis/Dig Out Your Soul/To Be Where There's Life.mp3	audio-track=1	codec=mp3	position=164.21
+/run/media/kevin/Storage/library/music/Purity Ring/another eternity/stillness in woe.mp3	audio-track=1	codec=mp3	position=142.86
+/run/media/kevin/Storage/library/music/Taylor Swift/Red/22.mp3	audio-track=1	codec=mp3	position=197.95
+/run/media/kevin/Storage/library/music/Taylor Swift/Red/22.mp3	audio-track=1	codec=mp3	position=198.43

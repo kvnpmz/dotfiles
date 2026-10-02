@@ -45,7 +45,7 @@ function M.get(current_time)
         icon = icons[index]
     end
 
-    return string.format("%s %3d %%", icon, battery.capacity)
+    return string.format("%3d %s", battery.capacity, icon)
 end
 
 return M

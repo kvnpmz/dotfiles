@@ -10,8 +10,8 @@ function M.get(current_time)
 
         cached_status =
             (vpn_check == true or vpn_check == 0)
-            and " 󰯄 "
-            or " 󱎘 "
+            and "󰯄"
+            or "󱎘"
 
         last_update = current_time
     end
@@ -20,7 +20,4 @@ function M.get(current_time)
 end
 
 return M
---[[
-            and " 󰯄 "
-            or " 󱎘 "
-            --]]
+

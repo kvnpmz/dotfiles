@@ -16,8 +16,8 @@ M.scroll = {
     ["󰕾:up"]   = "wpctl set-volume @DEFAULT_SINK@ --limit 1.0 '5%+'",
     ["󰕾:down"] = "wpctl set-volume @DEFAULT_SINK@ '5%-'",
 
-    ["󰃠:up"]   = "brightnessctl set +5%",
-    ["󰃠:down"] = "brightnessctl set 5%-",
+    ["◐:up"]   = "brightnessctl set +5%",
+    ["◐:down"] = "brightnessctl set 5%-",
 }
 
 return M

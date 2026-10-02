@@ -1,7 +1,7 @@
 local M = {}
 
 function M.get()
-    return "󰐥 "
+    return "󰐥"
 end
 
 return M

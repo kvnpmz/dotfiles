@@ -20,7 +20,7 @@ local keyboard = require("modules.keyboard")
 
 os.setlocale("", "time")
 
-local SPACER = "              "
+local SPACER = "                     "
 
 local function nz(value)
     return value or ""
@@ -47,7 +47,7 @@ while true do
 
     io.write(tags_line .. "\n")
 
-    local status_text = string.format("%s %s %s %s %s %s %s %s %s %s %s %s",
+    local status_text = string.format("%s %s  %s  %s %s %s %s  %s  %s  %s  %s  %s",
         nz(cpu_usage),
         nz(mem_status),
         nz(battery_str),
@@ -57,8 +57,8 @@ while true do
         nz(power_str),
         nz(network_str),
         nz(volume_str),
-        nz(brightness_str),
         nz(vpn_status),
+        nz(brightness_str),
         nz(kb_layout)
     )
 

@@ -7,18 +7,26 @@ fi
 
 CONFIG="$HOME/.config/kwim/config.zon"
 KWIM_BIN="$HOME/.local/bin/kwim"
-
 LOCK_FILE="/tmp/kwim_trigger.lock"
+LOG_FILE="/tmp/kwim.log"
 
 (
-    udevadm monitor --subsystem-match=input --udev | grep --line-buffered "add      /devices" | while read -r _; do
-        if [ ! -f "$LOCK_FILE" ]; then
-            touch "$LOCK_FILE"
-            (
-                sleep 0.5
-                "$KWIM_BIN" -c "$CONFIG"
-                /usr/bin/rm -f "$LOCK_FILE"
-            ) &
-        fi
+    while true; do
+        echo "=== kwim-watcher started at $(date) ===" >> "$LOG_FILE"
+
+        udevadm monitor --subsystem-match=input --udev | grep --line-buffered "add      /devices" | while read -r _; do
+            if [ ! -f "$LOCK_FILE" ]; then
+                touch "$LOCK_FILE"
+                (
+                    sleep 0.5
+                    "$KWIM_BIN" -c "$CONFIG" >> "$LOG_FILE" 2>&1
+                    /usr/bin/rm -f "$LOCK_FILE"
+                ) &
+            fi
+        done
+
+        echo "=== kwim-watcher exited unexpectedly, restarting in 2 seconds... ===" >> "$LOG_FILE"
+        sleep 2
     done
 ) &
+

@@ -2,16 +2,14 @@ local M = {}
 local helper = require("helpers")
 
 local last_update = 0
-local cpu_usage = "󱐋 0 % "
+local cpu_usage = "0 󱐋"
 local previous = helper.cpu_times()
 local cpu_values = {}
 
 function M.get(current_time)
     if current_time - last_update >= 2 then
         local current = helper.cpu_times()
-
-        if previous and current then
-            local pct = helper.cpu_percent(previous, current)
+if previous and current then local pct = helper.cpu_percent(previous, current)
 
             table.insert(cpu_values, pct)
             if #cpu_values > 5 then
@@ -24,7 +22,7 @@ function M.get(current_time)
             end
 
             local average = total / #cpu_values
-            cpu_usage = string.format(" 󱐋 %3.0f %% ", average)
+            cpu_usage = string.format("% 3.0f 󱐋", average)
         end
 
         previous = current

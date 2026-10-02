@@ -5,13 +5,13 @@ All terminal commands MUST be output in exactly ONE block using this structure:
 command 1
 command 2
 command 3
-} 2>&1 | wl-copy
+} |& cpy
 ```
 
 Mandatory rules:
 
 1. The opening '{' MUST be on its own line immediately before the first command.
-2. The closing '} 2>&1', and '| cpy' MUST appear together on the final line, immediately after the last command.
+2. The closing '}', and '|& cpy' MUST appear together on the final line, immediately after the last command.
 3. NEVER split commands across multiple blocks.
 4. NEVER provide terminal commands piecemeal outside this block.
 5. ALL find-and-replace operations MUST use Lua heredoc.
@@ -26,6 +26,6 @@ local function safeReplace(subject, target, replacement)
     return subject:gsub(safeTarget, safeRepl)
 end
 EOF
-} 2>&1 | wl-copy
+} |& cpy
 ```
 
