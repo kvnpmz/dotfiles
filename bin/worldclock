@@ -1,9 +1,9 @@
 #!/usr/bin/env lua
 
 local cities = {
-    { "󰖟  FL", "America/New_York" },
-    { "󰖟  TX", "America/Chicago" },
-    { "󰖟  BA", "America/Argentina/Buenos_Aires" },
+    { "FL 󰖟", "America/New_York" },
+    { "TX 󰖟", "America/Chicago" },
+    { "BA 󰖟", "America/Argentina/Buenos_Aires" },
 }
 
 local state_file = "/tmp/worldclock_state"

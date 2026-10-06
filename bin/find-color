@@ -1,0 +1,35 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Usage: find-color <search_term> [paths...]"
+    exit 1
+fi
+
+RAW_TERM="$1"
+shift
+
+if [ $# -eq 0 ]; then
+    PATHS="~ /etc"
+else
+    PATHS="$@"
+fi
+
+SEARCH_PATTERN="(^|[^0-9a-fA-F])#?${RAW_TERM}([^0-9a-fA-F]|$)"
+
+eval rg -i --no-messages --hidden \
+  -g '"!**/venv/**"' \
+  -g '"!**/.local/share/pnpm/**"' \
+  -g '"!**/.cache/**"' \
+  -g '"!**/.git/**"' \
+  -g '"!**/.npm/**"' \
+  -g '"!**/.dotnet/**"' \
+  -g '"!**/.cargo/**"' \
+  -g '"!**/.mozilla/firefox-backup/**"' \
+  -g '"!**/.mozilla/**/storage/**"' \
+  -g '"!**/.config/chromium/**"' \
+  -g '"!**/.config/google-chrome/**"' \
+  -g '"!**/.local/bin/**/lib/libc/**"' \
+  -g '"!**/src/zig/lib/libc/**"' \
+  -g '"!**/src/Sunshine/third-party/**"' \
+  -g '"!**/src/zig/src/**"' \
+  -e "\"$SEARCH_PATTERN\"" $PATHS

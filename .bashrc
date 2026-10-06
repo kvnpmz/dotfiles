@@ -16,8 +16,8 @@ export DOTNET_ROOT="$HOME/.dotnet"
 export PATH="$HOME/bin:$HOME/.local/bin:$DOTNET_ROOT:$HOME/.cargo/bin:/usr/lib/dotnet:$PATH"
 
 export HISTFILE=~/.bash_history
-export HISTSIZE=100000
-export HISTFILESIZE=200000
+export HISTSIZE=500000
+export HISTFILESIZE=1000000
 shopt -s histappend
 
 prompt_on_top() {

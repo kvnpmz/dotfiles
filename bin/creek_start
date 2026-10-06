@@ -58,7 +58,7 @@ async(context_cmd)
 local creek = io.popen([[
     creek -hg 50 \
     -fn "Ubuntu Sans Mono:size=24:weight=bold" \
-    -nf "0xffa500" \
+    -nf "0xFF9100" \
     -nb "0x231f1d" \
     < ]] .. fifo .. [[ 2> /tmp/creek.log
 ]], "r")

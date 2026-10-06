@@ -30,7 +30,7 @@ for name in pairs(vim.api.nvim_get_hl(0, {})) do
     vim.api.nvim_set_hl(0, name, {})
 end
 
-local dark, orange = "#231F1D", "#FFA500"
+local dark, orange = "#231F1D", "#FF9100"
 local inverted = { "Visual", "StatusLineNC", "Folded" }
 
 for _, name in ipairs(inverted) do

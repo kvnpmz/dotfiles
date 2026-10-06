@@ -1,5 +1,7 @@
 #!/usr/bin/env lua
 
+os.execute("toggle_red")
+
 local CONTROL = "/home/kevin/bin/wpv_control.sh"
 
 local function die(message)

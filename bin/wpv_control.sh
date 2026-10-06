@@ -24,6 +24,8 @@ revert_layout() {
     argenctl layout switch stacktile
     argenctl context switch terminal
 
+    toggle_red
+
     cleanup
 }
 

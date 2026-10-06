@@ -51,7 +51,7 @@ h.cmd("argenctl pointer-binding set normal Super BTN_LEFT move-window")
 h.cmd("argenctl pointer-binding set normal Super BTN_RIGHT resize-window")
 
 h.cmd("argenctl config set label-font \"Ubuntu Sans Mono:style=Bold:size=24\"")
-h.cmd("argenctl config set label-font-color 0xFFA500")
+h.cmd("argenctl config set label-font-color 0xFF9100")
 
 local context_names = { "browser", "terminal", "files", "general" }
 
