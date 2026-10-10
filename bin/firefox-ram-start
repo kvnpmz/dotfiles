@@ -1,6 +1,5 @@
 #!/bin/sh
 
-argenctl context switch browser
 /usr/local/bin/firefox-ram-restore
 firefox -P kevin
 status=$?

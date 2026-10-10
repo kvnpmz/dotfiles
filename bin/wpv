@@ -103,6 +103,9 @@ local function viewer_command(title, source)
         return table.concat({
             "mpv",
             "--title=" .. shell_quote(title),
+--
+--
+            "--af=lavfi=[afftdn],rubberband=pitch-scale=1.50",
             "--loop-file=inf",
             "--video-zoom=0.25",
             "--script=" .. shell_quote(script),

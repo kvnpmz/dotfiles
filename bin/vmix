@@ -68,6 +68,7 @@ mpv \
     --title="$TITLE" \
     "$LOOP_OPTION" \
     --playlist="$PLAYLIST" \
+    --af=lavfi=[afftdn],rubberband=pitch-scale=1.50 \
     --video-zoom=0.25 \
     --script="$HOME/.config/mpv/manual_scripts/rotate_auto.lua" \
     --script-opts="rotate_auto-transpose=$TRANSPOSE" \

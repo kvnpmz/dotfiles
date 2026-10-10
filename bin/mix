@@ -49,7 +49,7 @@ while true; do
     imix \
         --title "$TITLE" \
         --directory "$DIRECTORY" \
-        --count 10 \
+        --count 0 \
         --duration "$DURATION" \
         --transpose "$TRANSPOSE" \
         --once || sleep 2
