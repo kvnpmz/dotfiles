@@ -177,22 +177,5 @@ function M.display_width(s)
     return tonumber(output) or #s
 end
 
-local ffi = require("ffi")
-
-ffi.cdef[[
-    struct timespec {
-        long tv_sec;
-        long tv_nsec;
-    };
-    int nanosleep(const struct timespec *req, struct timespec *rem);
-]]
-
-function M.msleep(ms)
-    local req = ffi.new("struct timespec")
-    req.tv_sec = math.floor(ms / 1000)
-    req.tv_nsec = (ms % 1000) * 1000000
-    ffi.C.nanosleep(req, nil)
-end
-
 return M
 

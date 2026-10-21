@@ -1,4 +1,4 @@
-#!/usr/bin/env luajit
+#!/usr/bin/env lua
 
 local home = os.getenv("HOME")
 package.path = package.path .. ";" .. home .."/.config/argen/?.lua"
@@ -32,6 +32,9 @@ h.cmd("argenctl config set stacktile primary-ratio 0.6")
 h.cmd("argenctl config set stacktile outer-padding 0")
 h.cmd("argenctl config set stacktile inner-padding 4")
 
+h.cmd("argenctl config set columns outer-padding 0")
+h.cmd("argenctl config set columns inner-padding 2")
+
 h.cmd("argenctl config set 2x2 outer-padding 0")
 h.cmd("argenctl config set 2x2 inner-padding 6")
 
@@ -52,6 +55,8 @@ h.cmd("argenctl pointer-binding set normal Super BTN_RIGHT resize-window")
 
 h.cmd("argenctl config set label-font \"Ubuntu Sans Mono:style=Bold:size=24\"")
 h.cmd("argenctl config set label-font-color 0xFF9100")
+h.cmd("argenctl config set label-background-color 0x231F1DE0")
+h.cmd("argenctl config set label-highlight-color 0x3598FF")
 
 local context_names = { "browser", "terminal", "files", "general" }
 
@@ -95,6 +100,7 @@ h.bind_keys({
     { mode = "normal", key = "Super+Shift Tab", action = "window", value = "focus prev" },
     { mode = "normal", key = "Super J", action = "window", value = "swap next" },
     { mode = "normal", key = "Super K", action = "window", value = "swap prev" },
+    { mode = "normal", key = "Super D", action = "window", value = "zoom" },
     { mode = "normal", key = "Super B", action = "exec", value = home .. "/bin/bar_toggle" },
 })
 
@@ -108,7 +114,7 @@ h.cmd("argenctl context switch browser")
 h.start({
     home .. "/bin/start_audio.sh",
     "/usr/local/bin/sunshine >/tmp/sunshine.log 2>&1",
-    "swayidle -w timeout 3600 \"/usr/bin/sudo /usr/bin/zzz\" before-sleep \"true\"",
+    "swayidle -w timeout 600 \"/usr/bin/sudo /usr/bin/zzz\" before-sleep \"true\"",
     "mako",
     home .. "/bin/battery-warning",
     home .. "/bin/kwim-watcher",

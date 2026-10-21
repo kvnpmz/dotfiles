@@ -13,6 +13,7 @@ local sites = {
     ["dirtyship"] = "https://dirtyship.com/",
     ["porn00"] = "https://porn00.org/",
     ["cloudatacdn"] = "https://teencamrips.com/",
+    ["userscontent"] = "https://playvids.com/",
 }
 
 mp.add_hook("on_load", 10, function()
