@@ -6,7 +6,7 @@ DIRECTORY="/run/media/kevin/Storage/files/music/private/cutegeekie/mega"
 PLAYLIST="$(mktemp /tmp/media-shuffle.XXXXXX.m3u)"
 
 TRANSPOSE=2
-FILECOUNT=50
+FILECOUNT=150
 ONCE=0
 
 error_exit() {

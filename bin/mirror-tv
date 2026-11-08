@@ -4,5 +4,5 @@
 
 wlr-randr --output eDP-1 --mode 1920x1080 --pos 0,0
 wlr-randr --output HDMI-A-1 --mode 1920x1080 --pos 0,0
-wpctl set-default 57
+pkill gammastep 2>/dev/null; gammastep -O 6500 &
 

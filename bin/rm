@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 args=()
 for arg in "$@"; do
     [[ "$arg" =~ ^- ]] && continue  # skip all flags
@@ -7,5 +8,7 @@ done
 [ ${#args[@]} -eq 0 ] && exit 0
 
 for file in "${args[@]}"; do
+    [[ ! -e "$file" && ! -L "$file" ]] && continue
     gio trash -- "$file"
 done
+

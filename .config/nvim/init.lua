@@ -47,8 +47,15 @@ for k, v in pairs(options) do
     vim.opt[k] = v
 end
 
-vim.cmd([[ 
-call plug#begin('~/.vim/plugged')
-call plug#end() 
+vim.cmd([[
+    call plug#begin('~/.vim/plugged')
+
+    Plug 'nvim-lua/plenary.nvim'
+    Plug 'MeanderingProgrammer/render-markdown.nvim'
+    Plug 'azorng/goose.nvim'
+
+    call plug#end()
 ]])
+
+require("goose").setup({})
 
