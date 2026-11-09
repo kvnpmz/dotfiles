@@ -1,0 +1,35 @@
+# Docker Development Containers
+
+All three containers use the shared image `foot-dev:working`.
+
+## First launch (creates container)
+
+```bash
+~/z_docker/main.sh
+~/z_docker/tp.sh
+~/z_docker/platform.sh
+```
+
+## Subsequent launches (reopens existing container)
+
+```bash
+docker start -ai void-c-dev
+docker start -ai void-c-dev-2
+docker start -ai void-c-dev-platform
+```
+
+## Updating shared software
+
+After installing software or changing the shared environment in a container:
+
+```bash
+docker commit CONTAINER_NAME foot-dev:working
+```
+
+Existing containers do not automatically receive image updates. Recreate them from the updated image when needed.
+
+Project folders are bind-mounted from the host and remain independent of the Docker image.
+
+## Backup containers
+
+Keep `-old` containers until the new setup has been fully verified.
