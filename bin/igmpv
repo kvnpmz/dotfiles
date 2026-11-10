@@ -1,0 +1,83 @@
+#!/bin/sh
+USER="$1"
+SOCKET="/tmp/mpv-igmpv-${USER}-$$.sock"
+
+if [ -z "$USER" ]; then
+    echo "Usage: igmpv <instagram_username>"
+    exit 1
+fi
+
+# Clean up IPC socket on exit
+trap '/usr/bin/rm -f "$SOCKET"' EXIT INT TERM
+
+GALLERY_DL="/home/kevin/instagram_stream/venv/bin/gallery-dl"
+PYTHON="/home/kevin/instagram_stream/venv/bin/python"
+
+# 1. Fetch the first reel URL immediately for instant playback
+FIRST_URL=$(PYTHONUNBUFFERED=1 "$GALLERY_DL" \
+  --cookies-from-browser firefox \
+  --get-urls \
+  --range 1-1 \
+  -o extractor.instagram.include=reels \
+  "https://www.instagram.com/${USER}/reels/" \
+  | sed -u -n 's/^| //p' \
+  | head -n 1)
+
+if [ -z "$FIRST_URL" ]; then
+    echo "Error: No reels found or failed to extract cookies."
+    exit 1
+fi
+
+# 2. Launch mpv directly with the first URL in the foreground
+mpv --input-ipc-server="$SOCKET" \
+    --loop-file=no \
+    --loop-playlist=inf \
+    --keep-open=no \
+    --force-window=immediate \
+    "$FIRST_URL" &
+MPV_PID=$!
+
+# Wait briefly for mpv's IPC socket to initialize
+while [ ! -e "$SOCKET" ] && kill -0 "$MPV_PID" 2>/dev/null; do
+    sleep 0.05
+done
+
+# 3. Stream reels 2 to 200 asynchronously using a single persistent socket connection
+(
+  PYTHONUNBUFFERED=1 "$GALLERY_DL" \
+    --cookies-from-browser firefox \
+    --get-urls \
+    --range 2-200 \
+    -o extractor.instagram.include=reels \
+    "https://www.instagram.com/${USER}/reels/" \
+    | sed -u -n 's/^| //p' \
+    | "$PYTHON" -c "
+import socket, json, sys, time
+
+socket_path = sys.argv[1]
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+try:
+    s.connect(socket_path)
+except Exception:
+    sys.exit(0)
+
+for url in sys.stdin:
+    url = url.strip()
+    if url:
+        try:
+            cmd = json.dumps({'command': ['loadfile', url, 'append']}) + '\n'
+            s.sendall(cmd.encode())
+            time.sleep(0.02)
+        except Exception:
+            break
+
+try:
+    s.shutdown(socket.SHUT_RDWR)
+    s.close()
+except Exception:
+    pass
+" "$SOCKET"
+) >/dev/null 2>&1 &
+
+# 4. Stay attached in the terminal until mpv exits
+wait "$MPV_PID"

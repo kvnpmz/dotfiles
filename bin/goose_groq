@@ -1,0 +1,5 @@
+#!/bin/sh
+
+export OMNIROUTE_API_KEY="$(cat ~/.omniroute-apikey)"
+exec omniroute run goose --model groq/openai/gpt-oss-20b
+

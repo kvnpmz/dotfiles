@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APPIMAGE_DIR="${APPIMAGE_DIR:-$HOME/Applications}"
+
+apps=(artcraft deckcraft designcraft filmcraft gridcraft pdfcraft photocraft wordcraft)
+
+for name in "${apps[@]}"; do
+  cat > "$HOME/bin/$name" <<EOF
+#!/usr/bin/env bash
+# autowrapper for ${name}-*.AppImage (picks newest)
+f=\$(ls -1 "$APPIMAGE_DIR"/${name}-*.AppImage 2>/dev/null | sort -V | tail -1)
+[ -n "\$f" ] || { echo "${name}: no AppImage found in $APPIMAGE_DIR" >&2; exit 127; }
+exec "\$f" "\$@"
+EOF
+  chmod +x "$HOME/bin/$name"
+done
+
+echo "Wrappers regenerated in $HOME/bin (source: $APPIMAGE_DIR)"
+

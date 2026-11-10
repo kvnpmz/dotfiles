@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# autowrapper for pdfcraft-*.AppImage (picks newest)
+f=$(ls -1 "/home/kevin/Applications"/pdfcraft-*.AppImage 2>/dev/null | sort -V | tail -1)
+[ -n "$f" ] || { echo "pdfcraft: no AppImage found in /home/kevin/Applications" >&2; exit 127; }
+exec "$f" "$@"

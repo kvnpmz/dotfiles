@@ -1,0 +1,2 @@
+#!/bin/bash
+exec ~/.local/opt/goose/Goose-linux-x64/Goose "$@"

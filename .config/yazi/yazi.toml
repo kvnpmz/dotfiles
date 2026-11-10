@@ -3,3 +3,12 @@ edit = [
     { run = 'nvim "%s"', desc = "Neovim", block = true, for = "unix" },
 ]
 
+pdfcraft = [
+    { run = 'pdfcraft %s', orphan = true, desc = "pdfcraft" }
+]
+
+[open]
+prepend_rules = [
+    { url = "*.pdf", use = "pdfcraft" }
+]
+
