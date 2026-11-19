@@ -1,6 +1,6 @@
 #!/bin/sh
 exec docker run -it \
-    --name void-c-dev-2 \
+    --name main-box-tp \
     --security-opt no-new-privileges \
     --cap-drop ALL --cap-add DAC_OVERRIDE --cap-add CHOWN --cap-add FOWNER \
     --pids-limit 1024 --memory=8g --cpus=6 \
@@ -9,4 +9,4 @@ exec docker run -it \
     -e XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
     --mount type=bind,source="$XDG_RUNTIME_DIR",target="$XDG_RUNTIME_DIR" \
     --mount type=bind,source="/home/kevin/zz_tp",target=/workspace \
-    foot-dev:working /bin/sh
+    void-dev:latest /bin/sh

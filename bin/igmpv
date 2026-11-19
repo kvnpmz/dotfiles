@@ -7,8 +7,16 @@ if [ -z "$USER" ]; then
     exit 1
 fi
 
-# Clean up IPC socket on exit
-trap '/usr/bin/rm -f "$SOCKET"' EXIT INT TERM
+# Clean up background processes and socket on exit or interrupt
+cleanup() {
+    trap - EXIT INT TERM
+    # Terminate all child processes in this script's process group
+    kill 0 2>/dev/null
+    rm -f "$SOCKET"
+    exit 0
+}
+
+trap cleanup EXIT INT TERM
 
 GALLERY_DL="/home/kevin/instagram_stream/venv/bin/gallery-dl"
 PYTHON="/home/kevin/instagram_stream/venv/bin/python"
@@ -42,12 +50,13 @@ while [ ! -e "$SOCKET" ] && kill -0 "$MPV_PID" 2>/dev/null; do
     sleep 0.05
 done
 
-# 3. Stream reels 2 to 200 asynchronously using a single persistent socket connection
+# 3. Stream reels 2 to 100 asynchronously using a single persistent socket connection
 (
   PYTHONUNBUFFERED=1 "$GALLERY_DL" \
     --cookies-from-browser firefox \
     --get-urls \
-    --range 2-200 \
+    --range 2-100 \
+    -o extractor.instagram.sleep-request="[20.0, 30.0]" \
     -o extractor.instagram.include=reels \
     "https://www.instagram.com/${USER}/reels/" \
     | sed -u -n 's/^| //p' \
@@ -81,3 +90,5 @@ except Exception:
 
 # 4. Stay attached in the terminal until mpv exits
 wait "$MPV_PID"
+cleanup
+

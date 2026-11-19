@@ -1,2 +1,5 @@
 #!/bin/bash
-exec ~/.local/opt/goose/Goose-linux-x64/Goose "$@"
+
+export GOOSE_AUTO_COMPACT_TOKEN_LIMIT=300000
+exec ~/.local/opt/goose/Goose-linux-x64/Goose --force-device-scale-factor=1.5 "$@"
+

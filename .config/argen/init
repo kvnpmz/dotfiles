@@ -102,6 +102,7 @@ h.bind_keys({
     { mode = "normal", key = "Super K", action = "window", value = "swap prev" },
     { mode = "normal", key = "Super D", action = "window", value = "zoom" },
     { mode = "normal", key = "Super B", action = "exec", value = home .. "/bin/bar_toggle" },
+    { mode = "normal", key = "Super+Shift F", action = "exec", value = home .. "/bin/filepicker_reset" },
 })
 
 h.flush()

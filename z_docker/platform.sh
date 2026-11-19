@@ -1,6 +1,6 @@
 #!/bin/sh
 exec docker run -it \
-    --name void-c-dev-platform \
+    --name main-box-platform \
     --security-opt no-new-privileges \
     --cap-drop ALL --cap-add DAC_OVERRIDE --cap-add CHOWN --cap-add FOWNER \
     --pids-limit 1024 --memory=8g --cpus=6 \
@@ -10,4 +10,4 @@ exec docker run -it \
     --mount type=bind,source="$XDG_RUNTIME_DIR",target="$XDG_RUNTIME_DIR" \
     --mount type=bind,source="/home/kevin/realkevbase-platform",target=/workspace \
     --mount type=bind,source="/home/kevin/z_ob/etsy/TemplatePrintable",target=/workspace/zz_tp \
-    foot-dev:working /bin/sh
+    void-dev:latest /bin/sh

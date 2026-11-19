@@ -1,0 +1,16 @@
+#!/bin/sh
+# Usage: etsy-upload project[:filename] [project[:filename] ...]
+#   filename defaults to the project name if omitted
+set -e
+APP="$HOME/z_ob/etsy/uploader_app"
+cd "$APP"
+. venv/bin/activate
+for arg in "$@"; do
+    project=${arg%%:*}
+    if [ "$project" = "$arg" ]; then
+        filename="$project"
+    else
+        filename=${arg#*:}
+    fi
+    python src/batch_upload.py "$project" "$filename"
+done

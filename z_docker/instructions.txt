@@ -5,7 +5,7 @@ All three containers use the shared image `foot-dev:working`.
 ## First launch (creates container)
 
 ```bash
-~/z_docker/main.sh
+~/z_docker/foot.sh
 ~/z_docker/tp.sh
 ~/z_docker/platform.sh
 ```
@@ -13,9 +13,9 @@ All three containers use the shared image `foot-dev:working`.
 ## Subsequent launches (reopens existing container)
 
 ```bash
-docker start -ai void-c-dev
-docker start -ai void-c-dev-2
-docker start -ai void-c-dev-platform
+docker start -ai main-box-foot
+docker start -ai main-box-tp
+docker start -ai main-box-platform
 ```
 
 ## Updating shared software
@@ -23,7 +23,7 @@ docker start -ai void-c-dev-platform
 After installing software or changing the shared environment in a container:
 
 ```bash
-docker commit CONTAINER_NAME foot-dev:working
+docker commit CONTAINER_NAME void-dev:latest
 ```
 
 Existing containers do not automatically receive image updates. Recreate them from the updated image when needed.
