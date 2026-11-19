@@ -1,0 +1,26 @@
+[General]
+ColorScheme=BreezeDark
+
+[Icons]
+Theme=breeze-dark
+
+[KFileDialog Settings]
+Allow Expansion=false
+Automatically select filename extension=true
+Breadcrumb Navigation=true
+Decoration position=2
+Preview Width=144
+Show Full Path=false
+Show Inline Previews=true
+Show Preview=true
+Show Speedbar=true
+Show hidden files=false
+Sort by=Name
+Sort directories first=true
+Sort hidden files last=false
+Sort reversed=false
+Speedbar Width=83
+View Style=Detail
+
+[KShortcutsDialog Settings]
+Dialog Size=600,480

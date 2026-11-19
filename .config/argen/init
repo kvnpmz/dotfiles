@@ -13,6 +13,7 @@ h.export({
     LC_TIME = lc_time,
     XDG_CURRENT_DESKTOP = "river",
     XDG_SESSION_TYPE = "wayland",
+    GTK_USE_PORTAL = "1",
 })
 
 h.start({
@@ -49,6 +50,8 @@ h.cmd("argenctl rule add context --app-id \"com.kevin.yazi\" files")
 h.cmd("argenctl rule add context --app-id \"mpv\" general")
 
 h.cmd("argenctl rule add float --app-id \"one.alynx.showmethekey\"")
+h.cmd("argenctl rule add float --app-id \"org.freedesktop.impl.portal.desktop.kde\"")
+h.cmd("argenctl rule add float --app-id \"org.gnome.Zenity\"")
 
 h.cmd("argenctl pointer-binding set normal Super BTN_LEFT move-window")
 h.cmd("argenctl pointer-binding set normal Super BTN_RIGHT resize-window")
@@ -102,7 +105,6 @@ h.bind_keys({
     { mode = "normal", key = "Super K", action = "window", value = "swap prev" },
     { mode = "normal", key = "Super D", action = "window", value = "zoom" },
     { mode = "normal", key = "Super B", action = "exec", value = home .. "/bin/bar_toggle" },
-    { mode = "normal", key = "Super+Shift F", action = "exec", value = home .. "/bin/filepicker_reset" },
 })
 
 h.flush()
