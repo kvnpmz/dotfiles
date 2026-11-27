@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# docker_snap — clean a dev container, snapshot it into the shared image, drop the previous snapshot.
+#
+#   docker_snap                 clean main-box-foot, commit to void-dev:latest, prune old image
+#   docker_snap -n              same, but only show what would be cleaned (no changes)
+#   docker_snap -b              also remove build artifacts (target/, node_modules/, desktop out/)
+#   docker_snap -k              keep the previous snapshot instead of pruning it
+#   docker_snap -c main-box-tp  use a different container (image stays void-dev:latest)
+#
+# Every `docker commit` writes a full copy of everything that changed since the container was
+# created. So this cleans /tmp and caches first (otherwise they get baked into the image), and
+# then prunes the previous, now-untagged snapshot (otherwise it sits on disk forever).
+
+set -euo pipefail
+
+CONTAINER=main-box-foot
+IMAGE=void-dev:latest
+CLEAN_BUILDS=0
+PRUNE=1
+DRY_RUN=0
+POS=()
+
+usage() {
+    cat <<'EOF'
+Usage: docker_snap [OPTIONS] [CONTAINER] [IMAGE]
+
+Options:
+  -c, --container NAME   container to snapshot        (default: main-box-foot)
+  -i, --image REF        image to commit into         (default: void-dev:latest)
+  -b, --builds           also delete build artifacts  (target/, node_modules/, desktop out/)
+  -k, --keep-old         do not prune the previous image snapshot
+  -n, --dry-run          show what would be cleaned, change nothing
+  -h, --help             show this help
+
+Positional CONTAINER and IMAGE may be given instead of -c/-i.
+EOF
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -c|--container) CONTAINER="${2:?--container needs a value}"; shift 2 ;;
+        -i|--image)     IMAGE="${2:?--image needs a value}";         shift 2 ;;
+        -b|--builds)    CLEAN_BUILDS=1; shift ;;
+        -k|--keep-old)  PRUNE=0;        shift ;;
+        -n|--dry-run)   DRY_RUN=1;      shift ;;
+        -h|--help)      usage; exit 0 ;;
+        --)             shift; POS+=("$@"); break ;;
+        -*)             echo "docker_snap: unknown option: $1" >&2; usage >&2; exit 2 ;;
+        *)              POS+=("$1"); shift ;;
+    esac
+done
+
+[ ${#POS[@]} -gt 0 ] && CONTAINER="${POS[0]}"
+[ ${#POS[@]} -gt 1 ] && IMAGE="${POS[1]}"
+
+CACHE_PATHS="/root/.cache /root/.npm/_cacache /root/.npm/_npx /root/.npm/_logs /root/.cargo/registry/src /root/.cargo/registry/cache /root/.local/share/pnpm /root/.local/share/NuGet /root/.config/chromium-headless /var/cache/xbps"
+
+BUILD_PATHS="/root/goose/target /root/goose/ui/desktop/out"
+
+say() { printf '\033[1m%s\033[0m\n' "$*"; }
+
+docker inspect "$CONTAINER" >/dev/null 2>&1 || { echo "docker_snap: no such container: $CONTAINER" >&2; exit 1; }
+docker inspect "$IMAGE" >/dev/null 2>&1 || true
+
+# --- bring the container up so we can look/clean inside it -------------------
+STARTED_HERE=0
+if [ "$(docker inspect --format '{{.State.Running}}' "$CONTAINER")" != "true" ]; then
+    say "starting $CONTAINER (temporarily, will stop it again)"
+    docker start "$CONTAINER" >/dev/null
+    STARTED_HERE=1
+    trap '[ "$STARTED_HERE" = 1 ] && docker stop "$CONTAINER" >/dev/null 2>&1 || true' EXIT
+    sleep 2
+fi
+
+# --- the work inside the container, as plain shell --------------------------
+size_script="for p in $CACHE_PATHS; do [ -e \"\$p\" ] && du -sh \"\$p\" 2>/dev/null; done
+du -sh /tmp 2>/dev/null"
+clean_script="find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null
+for p in $CACHE_PATHS; do rm -rf \"\$p\"; done"
+
+if [ "$CLEAN_BUILDS" = 1 ]; then
+    size_script="$size_script
+for p in $BUILD_PATHS; do [ -e \"\$p\" ] && du -sh \"\$p\" 2>/dev/null; done"
+    clean_script="$clean_script
+for p in $BUILD_PATHS; do rm -rf \"\$p\"; done
+find /root -maxdepth 4 -type d -name node_modules -prune -exec rm -rf {} + 2>/dev/null"
+fi
+
+# --- dry run: report what would go, change nothing ---------------------------
+if [ "$DRY_RUN" = 1 ]; then
+    say "dry run: nothing will be deleted or committed"
+    docker exec "$CONTAINER" sh -c "$size_script" | sort -rh | sed 's/^/  /'
+    echo
+    if [ "$PRUNE" = 1 ]; then
+        say "would commit $CONTAINER -> $IMAGE, then prune the old snapshot"
+    else
+        say "would commit $CONTAINER -> $IMAGE, and keep the old snapshot (-k)"
+    fi
+    exit 0
+fi
+
+# --- clean: junk that must not be baked into the image ----------------------
+say "cleaning caches in $CONTAINER"
+docker exec "$CONTAINER" sh -c "$clean_script"
+
+# --- snapshot ---------------------------------------------------------------
+say "committing $CONTAINER -> $IMAGE"
+docker commit -m "snapshot $(date -Iseconds)" "$CONTAINER" "$IMAGE" | sed 's/^/  image: /'
+
+if [ "$STARTED_HERE" = 1 ]; then
+    docker stop "$CONTAINER" >/dev/null
+    STARTED_HERE=0
+    trap - EXIT
+fi
+
+# --- drop the previous snapshot --------------------------------------------
+if [ "$PRUNE" = 1 ]; then
+    say "pruning previous (untagged) snapshot"
+    docker image prune -f | sed 's/^/  /'
+else
+    say "keeping previous snapshot (-k)"
+fi
+
+say "done"
+docker images --format '  {{.Repository}}:{{.Tag}}  {{.ID}}  {{.Size}}' | grep -F -- "${IMAGE%%:*}" || true
+docker ps -as --format '  container {{.Names}}: {{.Size}}' | grep -F -- "$CONTAINER" || true

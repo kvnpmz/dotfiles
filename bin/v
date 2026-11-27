@@ -1,4 +1,5 @@
 #!/usr/bin/sh
 
-exec nvim "$@"
+# exec nvim "$@"
+exec /home/kevin/src/dez/zig-out/bin/dez "$@"
 

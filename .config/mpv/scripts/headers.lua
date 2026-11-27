@@ -14,6 +14,8 @@ local sites = {
     ["porn00"] = "https://porn00.org/",
     ["cloudatacdn"] = "https://teencamrips.com/",
     ["userscontent"] = "https://playvids.com/",
+    ["mustvideos"] = "https://mustvideos.com", 
+    ["fpo"] = "https://fpo.xxx", 
 }
 
 mp.add_hook("on_load", 10, function()

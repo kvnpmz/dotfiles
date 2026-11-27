@@ -45,13 +45,14 @@ h.cmd("argenctl context new files")
 h.cmd("argenctl context new general")
 
 h.cmd("argenctl rule add context --app-id \"Firefox\" browser")
-h.cmd("argenctl rule add context --app-id \"foot\" terminal")
+h.cmd("argenctl rule add context --app-id \"zigfoot\" terminal")
 h.cmd("argenctl rule add context --app-id \"com.kevin.yazi\" files")
 h.cmd("argenctl rule add context --app-id \"mpv\" general")
 
 h.cmd("argenctl rule add float --app-id \"one.alynx.showmethekey\"")
 h.cmd("argenctl rule add float --app-id \"org.freedesktop.impl.portal.desktop.kde\"")
 h.cmd("argenctl rule add float --app-id \"org.gnome.Zenity\"")
+h.cmd("argenctl rule add float --app-id \"firefox\" --title \"Picture-in-Picture\"")
 
 h.cmd("argenctl pointer-binding set normal Super BTN_LEFT move-window")
 h.cmd("argenctl pointer-binding set normal Super BTN_RIGHT resize-window")
@@ -76,7 +77,7 @@ for i, name in ipairs(context_names) do
 end
 
 h.bind_keys({
-    { mode = "normal", key = "Super T", action = "exec", value = "foot" },
+    { mode = "normal", key = "Super T", action = "exec", value = "zigfoot" },
     { mode = "normal", key = "Super E", action = "exec", value = home .. "/bin/yazi-start" },
     { mode = "normal", key = "Super W", action = "exec", value = home .. "/bin/firefox-ram-start" },
     { mode = "normal", key = "Super+Shift S", action = "exec", value = home .. "/bin/screenshot" },
@@ -117,12 +118,12 @@ h.cmd("argenctl context switch browser")
 h.start({
     home .. "/bin/start_audio.sh",
     "/usr/local/bin/sunshine >/tmp/sunshine.log 2>&1",
-    "swayidle -w timeout 600 \"/usr/bin/sudo /usr/bin/zzz\" before-sleep \"true\"",
+    "swayidle -w timeout 6000 \"/usr/bin/sudo /usr/bin/zzz\" before-sleep \"true\"",
     "mako",
     home .. "/bin/battery-warning",
     home .. "/bin/kwim-watcher",
     home .. "/bin/firefox-ram-start",
-    "foot",
+    "zigfoot",
     home .. "/bin/yazi-start",
     home .. "/bin/creek_start",
 })

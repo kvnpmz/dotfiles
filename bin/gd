@@ -1,0 +1,7 @@
+#!/bin/bash
+
+export GOOSE_AUTO_COMPACT_TOKEN_LIMIT=600000
+export GOOSE_SUBAGENT_PROVIDER="opencode_go"
+export GOOSE_SUBAGENT_MODEL="hy4-flash-free"
+exec /home/kevin/.local/opt/goose/Goose-linux-x64/Goose --force-device-scale-factor=1.5 "$@"
+

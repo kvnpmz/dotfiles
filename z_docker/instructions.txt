@@ -1,6 +1,6 @@
 # Docker Development Containers
 
-All three containers use the shared image `foot-dev:working`.
+All three containers use the shared image `void-dev:latest`.
 
 ## First launch (creates container)
 

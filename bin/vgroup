@@ -1,0 +1,769 @@
+#!/usr/bin/env lua5.4
+-- vgroup: Phase 1 conservative video duplicate-candidate grouper.
+-- Lua 5.4 standard library only. Source videos are opened only by ffprobe/ffmpeg.
+local ALGORITHM_VERSION = "vgroup-phase1-1"
+local FEATURE_VERSION = "gray16-ahash-dhash-pearson-v1"
+local GENERATOR_VERSION = "ffmpeg-single-frame-512-v1"
+local DEFAULT_ROOT = "/home/kevin/zz_mix/cg/videos"
+local DEFAULT_OUTPUT = "/home/kevin/zz_mix/cg/video-groups"
+local DEFAULT_STATE = "/home/kevin/.local/state/vgroup"
+local HARD_MIN_DURATION = 20.0
+local D_HASH_MAX = 10
+local A_HASH_MAX = 24
+local CORRELATION_MIN = 0.80
+local LOW_STDDEV = 3.0
+local LOW_DHASH_MAX = 4
+local LOW_CORRELATION_MIN = 0.92
+local SUPPORTED = {"mp4", "m4v", "mov", "mkv", "webm", "avi", "ts", "qt", "3gpp"}
+
+local function die(msg) io.stderr:write("vgroup: " .. msg .. "\n"); os.exit(1) end
+local function trim(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end
+local function q(s)
+  assert(type(s) == "string" and not s:find("\0", 1, true), "NUL in argument")
+  return "'" .. s:gsub("'", "'\\''") .. "'"
+end
+local function shell_status(command)
+  local ok, why, code = os.execute(command)
+  if ok == true then return true, "" end
+  return false, tostring(why or code or "command failed")
+end
+local function capture(command)
+  local p, err = io.popen(command .. " 2>/dev/null", "r")
+  if not p then return nil, err end
+  local data = p:read("*a")
+  local ok, why, code = p:close()
+  if ok ~= true and data == "" then return nil, tostring(why or code) end
+  return data or "", ""
+end
+local function timeout_capture(command, seconds)
+  return capture("timeout --foreground " .. tostring(seconds) .. " " .. command)
+end
+local function pct_byte(b) return string.format("%%%02X", b) end
+local function esc(s)
+  return (tostring(s):gsub("[%%\t\r\n]", function(c)
+    if c == "%" then return "%25" elseif c == "\t" then return "%09"
+    elseif c == "\r" then return "%0D" else return "%0A" end
+  end))
+end
+local function unesc(s)
+  return (tostring(s):gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end))
+end
+local function hex(s)
+  return (s:gsub(".", function(c) return string.format("%02x", c:byte()) end))
+end
+local function fromhex(s)
+  return (s:gsub("%x%x", function(h) return string.char(tonumber(h, 16)) end))
+end
+local function uri_encode_path(path)
+  local out = {}
+  for i = 1, #path do
+    local b = path:byte(i)
+    if (b >= 48 and b <= 57) or (b >= 65 and b <= 90) or (b >= 97 and b <= 122)
+      or b == 45 or b == 46 or b == 95 or b == 126 then
+      out[#out + 1] = string.char(b)
+    else out[#out + 1] = pct_byte(b) end
+  end
+  return table.concat(out)
+end
+local function uri_decode_path(uri)
+  return (uri:gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end))
+end
+local function html_escape(s)
+  s = tostring(s)
+  return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+    :gsub('"', "&quot;"):gsub("'", "&#39;"))
+end
+local function under(path, parent)
+  return path == parent or path:sub(1, #parent + 1) == parent .. "/"
+end
+local function lexical_absolute(path)
+  if path:sub(1, 1) ~= "/" then
+    local cwd = assert(capture("pwd"))
+    path = trim(cwd) .. "/" .. path
+  end
+  local parts = {}
+  for part in path:gmatch("[^/]+") do
+    if part == "." then
+    elseif part == ".." then table.remove(parts)
+    else parts[#parts + 1] = part end
+  end
+  return "/" .. table.concat(parts, "/")
+end
+local function md5(text)
+  local data, err = capture("printf %s " .. q(text) .. " | md5sum")
+  if not data then return nil, err end
+  local value = data:match("^([0-9a-fA-F]+)")
+  return value and value:lower()
+end
+local function stat_file(path)
+  local data, err = capture("stat -c '%s\t%y' -- " .. q(path))
+  if not data then return nil, err end
+  local size, date = data:match("^(%d+)\t(.+)$")
+  if not size then return nil, "cannot parse stat" end
+  local nanos = date:match("%.(%d+)")
+  nanos = nanos and nanos:sub(1, 9):gsub("(%d)", "%1") or "000000000"
+  nanos = nanos .. string.rep("0", 9 - #nanos)
+  return {path = path, size = tonumber(size), mtime_ns = nanos, mtime_s = tonumber(nanos:sub(1, 1) == "0" and nanos or nanos)}
+end
+local function seconds_from_ns(ns)
+  -- Compare second and nanoseconds directly to avoid floating-point rounding.
+  return tostring(ns):sub(1, -10), tostring(ns):sub(-9)
+end
+local function same_mtime_second(ns, thumb_epoch)
+  local sec = tostring(ns):sub(1, -10)
+  local n = tonumber(thumb_epoch)
+  if not n or n ~= n or math.abs(n) == math.huge then return false end
+  return math.abs(n - tonumber(sec)) <= 1.01
+end
+local function read_lines(path)
+  local f = io.open(path, "rb")
+  if not f then return {} end
+  local data = f:read("*a"); f:close()
+  local lines = {}
+  for line in (data .. "\n"):gmatch("(.-)\n") do
+    if line ~= "" then lines[#lines + 1] = line end
+  end
+  return lines
+end
+local function read_tsv(path)
+  local lines = read_lines(path)
+  if #lines == 0 then return {}, {} end
+  local header, rows = {}, {}
+  for name in lines[1]:gmatch("[^\t]+") do header[#header + 1] = unesc(name) end
+  for i = 2, #lines do
+    local vals, row = {}, {}
+    for value in lines[i]:gmatch("[^\t]*") do vals[#vals + 1] = unesc(value) end
+    for j, name in ipairs(header) do row[name] = vals[j] or "" end
+    rows[#rows + 1] = row
+  end
+  return header, rows
+end
+local function tsv(header, rows)
+  local out = {table.concat((function() local h = {}; for i,v in ipairs(header) do h[i]=esc(v) end; return h end)(), "\t")}
+  for _, row in ipairs(rows) do
+    local vals = {}
+    for i, name in ipairs(header) do vals[i] = esc(row[name] or "") end
+    out[#out + 1] = table.concat(vals, "\t")
+  end
+  return table.concat(out, "\n") .. "\n"
+end
+local function mkdir_safe(path, checked)
+  if under(path, checked.source) then die("refusing output/state path under source: " .. path) end
+  local ok, err = shell_status("mkdir -p -- " .. q(path))
+  if not ok then die("cannot create directory " .. path .. ": " .. err) end
+end
+local function validate_destination(path, checked)
+  path = lexical_absolute(path)
+  if under(path, checked.source) then die("refusing output/state path equal to or under source: " .. path) end
+  local partial = ""
+  for component in path:gmatch("[^/]+") do
+    partial = partial .. "/" .. component
+    local islink = capture("test -L " .. q(partial) .. " && printf yes || printf no")
+    if islink == "yes" then die("refusing symlink in generated destination: " .. partial) end
+  end
+  return path
+end
+local temp_counter = 0
+local function atomic_write(path, data, checked)
+  path = validate_destination(path, checked)
+  temp_counter = temp_counter + 1
+  local temp = path .. ".tmp-" .. tostring(os.time()) .. "-" .. tostring(os.getenv("PPID") or "0") .. "-" .. temp_counter
+  while capture("test -e " .. q(temp) .. " && printf yes || printf no") == "yes" do
+    temp_counter = temp_counter + 1
+    temp = path .. ".tmp-" .. tostring(os.time()) .. "-" .. tostring(os.getenv("PPID") or "0") .. "-" .. temp_counter
+  end
+  local f, err = io.open(temp, "wb")
+  if not f then die("cannot write " .. temp .. ": " .. tostring(err)) end
+  assert(f:write(data)); assert(f:close())
+  local ok, why = os.rename(temp, path)
+  if not ok then die("atomic rename failed for " .. path .. ": " .. tostring(why)) end
+end
+local function copy_file(src, dst, checked)
+  dst = validate_destination(dst, checked)
+  local in_f, err = io.open(src, "rb")
+  if not in_f then return false, err end
+  local out_f, err2 = io.open(dst, "wb")
+  if not out_f then in_f:close(); return false, err2 end
+  while true do
+    local block = in_f:read(65536)
+    if not block then break end
+    if not out_f:write(block) then in_f:close(); out_f:close(); return false, "copy write failed" end
+  end
+  in_f:close()
+  if not out_f:close() then return false, "copy close failed" end
+  return true
+end
+
+local opts = {
+  root = DEFAULT_ROOT, output = DEFAULT_OUTPUT, state = DEFAULT_STATE,
+  duration_window = 15, min_duration = 20, max_group_size = 80,
+  thumb_cache = os.getenv("HOME") and os.getenv("HOME") .. "/.cache/thumbnails" or "/.cache/thumbnails",
+  no_generate_missing = false, refresh_durations = false, refresh_features = false,
+  dry_run = false,
+}
+local function number_arg(value, name, integer)
+  local n = tonumber(value)
+  if not n or n ~= n or math.abs(n) == math.huge then die(name .. " requires a number") end
+  if integer and n ~= math.floor(n) then die(name .. " requires an integer") end
+  return n
+end
+local i = 1
+while i <= #arg do
+  local a = arg[i]
+  local function need_value()
+    i = i + 1
+    if not arg[i] then die(a .. " requires a value") end
+    return arg[i]
+  end
+  if a == "--root" then opts.root = need_value()
+  elseif a == "--output" then opts.output = need_value()
+  elseif a == "--state" then opts.state = need_value()
+  elseif a == "--duration-window" then
+    opts.duration_window = number_arg(need_value(), a, false)
+    if opts.duration_window < 10 or opts.duration_window > 20 then die("--duration-window must be in 10..20") end
+  elseif a == "--min-duration" then opts.min_duration = number_arg(need_value(), a, false)
+  elseif a == "--max-group-size" then
+    opts.max_group_size = number_arg(need_value(), a, true)
+    if opts.max_group_size < 2 then die("--max-group-size must be at least 2") end
+  elseif a == "--thumb-cache" then opts.thumb_cache = need_value()
+  elseif a == "--no-generate-missing" then opts.no_generate_missing = true
+  elseif a == "--refresh-durations" then opts.refresh_durations = true
+  elseif a == "--refresh-features" then opts.refresh_features = true
+  elseif a == "--dry-run" then opts.dry_run = true
+  elseif a == "--help" or a == "-h" then
+    print("Usage: vgroup [--root DIR] [--output DIR] [--state DIR]")
+    print("       [--duration-window 15] [--min-duration 20] [--max-group-size 80]")
+    print("       [--thumb-cache DIR] [--no-generate-missing] [--refresh-durations]")
+    print("       [--refresh-features] [--dry-run] [--help]")
+    print("Creates conservative candidate groups, never confirmed-duplicate claims.")
+    os.exit(0)
+  else die("unknown argument: " .. a) end
+  i = i + 1
+end
+opts.root = lexical_absolute(opts.root)
+opts.output = lexical_absolute(opts.output)
+opts.state = lexical_absolute(opts.state)
+opts.thumb_cache = lexical_absolute(opts.thumb_cache)
+local checked = {source = opts.root}
+validate_destination(opts.output, checked)
+validate_destination(opts.state, checked)
+if under(opts.output, opts.state) or under(opts.state, opts.output) then
+  -- Overlapping roots are not inherently unsafe, but generated directory names must remain predictable.
+end
+if capture("test -d " .. q(opts.root) .. " && printf yes || printf no") ~= "yes" then
+  die("source root is missing or not a directory: " .. opts.root)
+end
+
+local function inventory()
+  local terms = {}
+  for _, ext in ipairs(SUPPORTED) do terms[#terms + 1] = "-iname " .. q("*." .. ext) end
+  local command = "find -P " .. q(opts.root) .. " -type f \\( " .. table.concat(terms, " -o ") .. " \\) -print0"
+  local p, err = io.popen(command .. " 2>/dev/null", "r")
+  if not p then die("find failed: " .. tostring(err)) end
+  local data = p:read("*a")
+  local ok, why, code = p:close()
+  if ok ~= true then die("find failed: " .. tostring(why or code)) end
+  local files = {}
+  for path in data:gmatch("([^%z]+)%z") do
+    local st = stat_file(path)
+    if st then files[#files + 1] = st
+    else die("cannot stat source file: " .. path) end
+  end
+  return files
+end
+local issues = {}
+local function issue(kind, path, detail)
+  issues[#issues + 1] = {kind = kind, path = path or "", detail = detail or ""}
+end
+local before = inventory()
+print(string.format("Inventory: %d supported video files", #before))
+local root_hash = assert(md5(opts.root))
+local duration_dir = opts.state .. "/caches/" .. root_hash
+local feature_dir = opts.state .. "/caches/" .. root_hash
+local thumb_dir = opts.state .. "/thumbnails/" .. root_hash
+local duration_cache_path = duration_dir .. "/durations.tsv"
+local feature_cache_path = feature_dir .. "/features.tsv"
+local duration_header = {"path", "size", "mtime_ns", "duration", "source", "status", "probe_version", "checked_timestamp"}
+local feature_header = {"path", "size", "mtime_ns", "thumb_path", "thumb_size", "thumb_mtime_ns", "algorithm", "gray", "ahash", "dhash", "stddev", "low_information", "aspect", "zero_hash"}
+local _, old_duration_rows = read_tsv(duration_cache_path)
+local duration_cache = {}
+for _, row in ipairs(old_duration_rows) do
+  duration_cache[row.path .. "\0" .. row.size .. "\0" .. row.mtime_ns] = row
+end
+local probe_version = trim((select(1, assert(capture("ffprobe -version"))) or ""):match("^([^\n]+)")) or "unknown"
+
+local function positive_duration(s)
+  local n = tonumber(s)
+  if n and n == n and n > 0 and math.abs(n) < math.huge then return n end
+end
+local function probe_duration(path)
+  local data, err = timeout_capture("ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -- " .. q(path), 30)
+  local duration = data and positive_duration(trim(data))
+  if duration then return duration, "format" end
+  data, err = timeout_capture("ffprobe -v error -show_entries stream=index,codec_type,duration -of json -- " .. q(path), 30)
+  if data then
+    for value in data:gmatch('"duration"%s*:%s*"([^"]+)"') do
+      local n = positive_duration(value)
+      if n and (not duration or n > duration) then duration = n end
+    end
+  end
+  if duration then return duration, "stream" end
+  return nil, trim(err or "no valid duration")
+end
+
+local durations = {}
+local duration_rows = {}
+for index, st in ipairs(before) do
+  local key = st.path .. "\0" .. st.size .. "\0" .. st.mtime_ns
+  local row = duration_cache[key]
+  if not opts.refresh_durations and row and row.status == "ok" and positive_duration(row.duration) then
+    durations[st.path] = {duration = tonumber(row.duration), source = row.source}
+    duration_rows[#duration_rows + 1] = row
+  else
+    local duration, source = probe_duration(st.path)
+    if duration then
+      durations[st.path] = {duration = duration, source = source}
+      duration_rows[#duration_rows + 1] = {path = st.path, size = st.size, mtime_ns = st.mtime_ns,
+        duration = string.format("%.9f", duration), source = source, status = "ok",
+        probe_version = probe_version, checked_timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")}
+    else
+      duration_rows[#duration_rows + 1] = {path = st.path, size = st.size, mtime_ns = st.mtime_ns,
+        duration = "", source = "", status = "unprobeable", probe_version = probe_version,
+        checked_timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")}
+      issue("unprobeable", st.path, source)
+    end
+  end
+  if index % 100 == 0 then print(string.format("Duration progress: %d/%d", index, #before)) end
+end
+
+local eligible = {}
+for _, st in ipairs(before) do
+  local d = durations[st.path]
+  if d and d.duration > HARD_MIN_DURATION then
+    st.duration = d.duration; st.duration_source = d.duration_source
+    eligible[#eligible + 1] = st
+  elseif d then issue("short/excluded", st.path, string.format("duration %.6f is not > %.1f", d.duration, HARD_MIN_DURATION)) end
+end
+table.sort(eligible, function(a, b)
+  if a.duration ~= b.duration then return a.duration < b.duration end
+  return a.path < b.path
+end)
+
+local function thumb_info(path)
+  local st = stat_file(path)
+  if not st or not st.size or st.size == 0 then return nil end
+  local data = timeout_capture("identify -format '%w %h\\n%[Thumb::URI]\\n%[Thumb::MTime]\\n' -- " .. q(path), 15)
+  if not data then return nil end
+  local width, height = data:match("^(%d+)%s+(%d+)")
+  width, height = tonumber(width), tonumber(height)
+  if not width or not height or width < 16 or height < 16 then return nil end
+  local uri = data:match("\n([^\n]*)\n[^\n]*\n?$") or ""
+  local mtime = data:match("\n[^\n]*\n([^\n]*)") or ""
+  return {path = path, size = st.size, mtime_ns = st.mtime_ns, width = width, height = height, uri = uri, thumb_mtime = mtime}
+end
+local function validate_system_thumb(path, st)
+  local info = thumb_info(path)
+  if not info then return nil, "image unreadable or dimensions unusable" end
+  if info.uri == "" then return nil, "missing Thumb::URI metadata" end
+  local decoded = uri_decode_path(trim(info.uri))
+  if decoded ~= st.path then return nil, "Thumb::URI does not map to source" end
+  if not same_mtime_second(st.mtime_ns, info.thumb_mtime) then return nil, "thumbnail mtime is stale" end
+  return info
+end
+local function resolve_system_thumbnail(st)
+  local uri = "file://" .. uri_encode_path(st.path)
+  local digest = assert(md5(uri))
+  local tried = {}
+  for _, size in ipairs({"x-large", "large", "normal"}) do
+    local candidate = opts.thumb_cache .. "/" .. size .. "/" .. digest .. ".png"
+    if capture("test -f " .. q(candidate) .. " && printf yes || printf no") == "yes" then
+      local info, why = validate_system_thumb(candidate, st)
+      tried[#tried + 1] = size .. ": " .. (why or "valid")
+      if info then info.source = "system:" .. size; return info end
+    end
+  end
+  return nil, table.concat(tried, "; ")
+end
+local function validate_generated_thumb(st, info)
+  if not info or info.uri ~= "" then return nil end
+  if not same_mtime_second(st.mtime_ns, info.thumb_mtime) then return nil end
+  return info
+end
+local thumbnails = {}
+local function generate_thumbnail(st)
+  local key = assert(md5(st.path .. "\0" .. st.size .. "\0" .. st.mtime_ns))
+  local final = thumb_dir .. "/" .. key .. ".jpg"
+  local sidecar = final .. ".tsv"
+  local _, rows = read_tsv(sidecar)
+  for _, row in ipairs(rows) do
+    if row.source_path == st.path and row.source_size == tostring(st.size) and row.source_mtime_ns == st.mtime_ns
+      and row.thumbnail_path == final and row.generator == GENERATOR_VERSION then
+      local info = thumb_info(final)
+      if info and row.thumbnail_size == tostring(info.size) and row.thumbnail_mtime_ns == info.mtime_ns
+        and validate_generated_thumb(st, info) then
+        info.source = "generated"; return info
+      end
+    end
+  end
+  if opts.no_generate_missing then return nil, "generation disabled" end
+  if not st.duration or not (st.duration > opts.min_duration) then return nil, "duration is not > min-duration" end
+  if opts.dry_run then return nil, "dry-run does not generate thumbnails" end
+  mkdir_safe(thumb_dir, checked)
+  validate_destination(final, checked); validate_destination(sidecar, checked)
+  local seek = math.max(1, math.min(10, st.duration * 0.10))
+  local temp = final .. ".tmp-" .. tostring(os.time()) .. "-" .. tostring(os.getpid and os.getpid() or 0) .. "-" .. tostring(temp_counter + 1)
+  temp_counter = temp_counter + 1
+  while capture("test -e " .. q(temp) .. " && printf yes || printf no") == "yes" do
+    temp_counter = temp_counter + 1
+    temp = final .. ".tmp-" .. tostring(os.time()) .. "-" .. tostring(os.getpid and os.getpid() or 0) .. "-" .. temp_counter
+  end
+  local command = "ffmpeg -v error -nostdin -y -ss " .. string.format("%.6f", seek) .. " -i " .. q(st.path)
+    .. " -frames:v 1 -vf " .. q("scale=w='min(512,iw)':h='min(512,ih)':force_original_aspect_ratio=decrease")
+    .. " -update 1 " .. q(temp)
+  local ok, why = shell_status("timeout --foreground 45 " .. command)
+  if not ok then issue("generation failure", st.path, why); return nil, why end
+  local info = thumb_info(temp)
+  if not info then issue("generation failure", st.path, "generated image missing, empty, or unreadable"); return nil end
+  local renamed, rename_err = os.rename(temp, final)
+  if not renamed then issue("generation failure", st.path, tostring(rename_err)); return nil end
+  info = thumb_info(final)
+  if not info then issue("generation failure", st.path, "generated output failed validation"); return nil end
+  local header = {"source_path", "source_size", "source_mtime_ns", "thumbnail_path", "thumbnail_size", "thumbnail_mtime_ns", "generator", "created_timestamp"}
+  local row = {source_path = st.path, source_size = st.size, source_mtime_ns = st.mtime_ns,
+    thumbnail_path = final, thumbnail_size = info.size, thumbnail_mtime_ns = info.mtime_ns,
+    generator = GENERATOR_VERSION, created_timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")}
+  atomic_write(sidecar, tsv(header, {row}), checked)
+  info.source = "generated"
+  return info
+end
+
+for index, st in ipairs(eligible) do
+  local info, why = resolve_system_thumbnail(st)
+  if not info then
+    if why ~= "" then issue("stale/unreadable cache", st.path, why) end
+    info, why = generate_thumbnail(st)
+  end
+  if info then st.thumb = info; thumbnails[st.path] = info
+  else issue("missing thumbnail", st.path, why) end
+  if index % 100 == 0 then print(string.format("Thumbnail progress: %d/%d", index, #eligible)) end
+end
+
+local function extract_feature(st)
+  local thumb = st.thumb
+  local gray, err = timeout_capture("magick " .. q(thumb.path) .. " -auto-orient -colorspace Gray -resize 16x16! -depth 8 gray:-", 20)
+  if not gray or #gray ~= 256 then return nil, err or "grayscale sample is not 256 bytes" end
+  local sum = 0
+  for i = 1, 256 do sum = sum + gray:byte(i) end
+  local mean = sum / 256
+  local variance = 0
+  for i = 1, 256 do local d = gray:byte(i) - mean; variance = variance + d * d end
+  local stddev = math.sqrt(variance / 256)
+  local ahash, dhash = 0, 0
+  for i = 1, 256 do if gray:byte(i) >= mean then ahash = (ahash << 1) | 1 else ahash = ahash << 1 end end
+  for y = 0, 15 do for x = 0, 14 do
+    local left = gray:byte(y * 16 + x + 1)
+    local right = gray:byte(y * 16 + x + 2)
+    dhash = (dhash << 1) | ((left > right) and 1 or 0)
+  end end
+  local grayhex = hex(gray)
+  local ah = string.format("%016x", ahash)
+  local dh = string.format("%016x", dhash)
+  local low = stddev < LOW_STDDEV or dh == "0000000000000000" or ah == "0000000000000000"
+  return {gray = gray, ahash = ah, dhash = dh, stddev = stddev, low_information = low,
+    zero_hash = (dh == "0000000000000000" or ah == "0000000000000000"), aspect = thumb.width / thumb.height}
+end
+local _, old_feature_rows = read_tsv(feature_cache_path)
+local feature_cache = {}
+for _, row in ipairs(old_feature_rows) do
+  local key = row.path .. "\0" .. row.size .. "\0" .. row.mtime_ns .. "\0" .. row.thumb_path .. "\0" .. row.thumb_size .. "\0" .. row.thumb_mtime_ns .. "\0" .. row.algorithm
+  feature_cache[key] = row
+end
+local feature_rows = {}
+for _, st in ipairs(eligible) do
+  st.feature = nil
+  if not st.thumb then
+    -- Missing-thumbnail issues were already recorded during resolution.
+  else
+    local key = st.path .. "\0" .. st.size .. "\0" .. st.mtime_ns .. "\0" .. st.thumb.path .. "\0" .. st.thumb.size .. "\0" .. st.thumb.mtime_ns .. "\0" .. FEATURE_VERSION
+    local cached = not opts.refresh_features and feature_cache[key]
+    if cached and #cached.gray == 512 then
+      st.feature = {gray = fromhex(cached.gray), ahash = cached.ahash, dhash = cached.dhash,
+        stddev = tonumber(cached.stddev), low_information = cached.low_information == "1" or cached.low_information == "true",
+        zero_hash = cached.zero_hash == "1" or cached.zero_hash == "true", aspect = tonumber(cached.aspect) or (st.thumb.width / st.thumb.height)}
+    else
+      local feature, why = extract_feature(st)
+      if feature then st.feature = feature
+      else issue("stale/unreadable cache", st.thumb.path, "feature extraction failed: " .. (why or "unknown")) end
+    end
+    if st.feature then
+      local f = st.feature
+      feature_rows[#feature_rows + 1] = {path = st.path, size = st.size, mtime_ns = st.mtime_ns,
+        thumb_path = st.thumb.path, thumb_size = st.thumb.size, thumb_mtime_ns = st.thumb.mtime_ns,
+        algorithm = FEATURE_VERSION, gray = hex(f.gray), ahash = f.ahash, dhash = f.dhash,
+        stddev = string.format("%.9f", f.stddev), low_information = f.low_information and "1" or "0",
+        aspect = string.format("%.9f", f.aspect), zero_hash = f.zero_hash and "1" or "0"}
+    end
+  end
+end
+
+local function hamming(a, b)
+  local x = tonumber(a, 16) ~ tonumber(b, 16)
+  local count = 0
+  for _ = 1, 64 do count = count + (x & 1); x = x >> 1 end
+  return count
+end
+local function correlation(a, b)
+  local ma, mb, cov, va, vb = 0, 0, 0, 0, 0
+  for i = 1, 256 do ma = ma + a:byte(i); mb = mb + b:byte(i) end
+  ma, mb = ma / 256, mb / 256
+  for i = 1, 256 do
+    local da, db = a:byte(i) - ma, b:byte(i) - mb
+    cov = cov + da * db; va = va + da * da; vb = vb + db * db
+  end
+  if va <= 0 or vb <= 0 then return 0 end
+  return cov / math.sqrt(va * vb)
+end
+local usable = {}
+for _, st in ipairs(eligible) do
+  if not st.feature then
+  elseif st.feature.low_information then
+    issue("low-information", st.path, "low variance or zero/common hash; excluded from candidate grouping")
+  else usable[#usable + 1] = st end
+end
+local pair_metrics = {}
+local function compare(a, b)
+  if a.path > b.path then a, b = b, a end
+  local dh, ah = hamming(a.feature.dhash, b.feature.dhash), hamming(a.feature.ahash, b.feature.ahash)
+  local corr = correlation(a.feature.gray, b.feature.gray)
+  local accepted = dh <= D_HASH_MAX and ah <= A_HASH_MAX and corr >= CORRELATION_MIN
+  return {dh = dh, ah = ah, corr = corr, accepted = accepted}
+end
+for i = 1, #usable do
+  for j = i + 1, #usable do
+    if math.abs(usable[i].duration - usable[j].duration) <= opts.duration_window then
+      local m = compare(usable[i], usable[j])
+      if m.accepted then pair_metrics[usable[i].path .. "\0" .. usable[j].path] = m end
+    end
+  end
+end
+local groups = {}
+local by_path = {}
+for _, st in ipairs(usable) do by_path[st.path] = st end
+for _, st in ipairs(usable) do
+  local chosen
+  for _, group in ipairs(groups) do
+    if #group < opts.max_group_size and group.max_duration - group.min_duration <= opts.duration_window
+      and math.abs(st.duration - group.min_duration) <= opts.duration_window
+      and math.abs(st.duration - group.max_duration) <= opts.duration_window then
+      local all = true
+      for _, member in ipairs(group) do
+        local first, second = member.path, st.path
+        if first > second then first, second = second, first end
+        if not pair_metrics[first .. "\0" .. second] then all = false; break end
+      end
+      if all then chosen = group; break end
+    end
+  end
+  if not chosen then
+    chosen = {members = {}, min_duration = st.duration, max_duration = st.duration}
+    groups[#groups + 1] = chosen
+  end
+  chosen.members[#chosen.members + 1] = st
+  chosen.min_duration = math.min(chosen.min_duration, st.duration)
+  chosen.max_duration = math.max(chosen.max_duration, st.duration)
+end
+local candidate_groups = {}
+for _, group in ipairs(groups) do
+  if #group.members >= 2 then
+    group.id = string.format("G%06d", #candidate_groups + 1)
+    group.min_duration, group.max_duration = math.huge, -math.huge
+    for _, st in ipairs(group.members) do
+      group.min_duration = math.min(group.min_duration, st.duration)
+      group.max_duration = math.max(group.max_duration, st.duration)
+    end
+    candidate_groups[#candidate_groups + 1] = group
+  end
+end
+
+local function safe_stem(path)
+  local name = path:match("([^/]+)$") or "video"
+  name = name:gsub("%.[^.]+$", "")
+  name = name:gsub("[^A-Za-z0-9._-]", "_")
+  name = name:gsub("^%.+", "")
+  if name == "" then name = "video" end
+  return name:sub(1, 80)
+end
+local function member_flags(st)
+  local flags = {}
+  if st.feature.low_information then flags[#flags + 1] = "low-information" end
+  if st.feature.zero_hash then flags[#flags + 1] = "zero-hash" end
+  if st.thumb.source:match("^system:") then flags[#flags + 1] = "system-thumbnail" else flags[#flags + 1] = "generated-thumbnail" end
+  return table.concat(flags, ",")
+end
+local function member_pair_summary(group, st)
+  local max_dh, max_ah, min_corr, count = 0, 0, math.huge, 0
+  for _, other in ipairs(group.members) do
+    if other ~= st then
+      local a, b = st.path, other.path
+      if a > b then a, b = b, a end
+      local m = pair_metrics[a .. "\0" .. b]
+      if m then
+        max_dh = math.max(max_dh, m.dh); max_ah = math.max(max_ah, m.ah)
+        min_corr = math.min(min_corr, m.corr); count = count + 1
+      end
+    end
+  end
+  if count == 0 then return "", "", "" end
+  return max_dh, max_ah, string.format("%.6f", min_corr)
+end
+
+print(string.format("Planned candidates: %d eligible, %d usable, %d groups, %d grouped videos",
+  #eligible, #usable, #candidate_groups, (function() local n=0; for _,g in ipairs(candidate_groups) do n=n+#g.members end; return n end)()))
+if opts.dry_run then
+  print("Dry-run: no output/state files created; thumbnails are not generated or copied.")
+  os.exit(0)
+end
+
+local now = os.date("!%Y%m%dT%H%M%SZ")
+local suffix = tostring(os.time()) .. "-" .. tostring(os.getenv("PPID") or "0")
+local run_name = now .. "-" .. suffix
+local staging = opts.output .. "/.staging-" .. run_name
+local run_path = opts.output .. "/runs/" .. run_name
+mkdir_safe(staging .. "/groups", checked)
+
+for _, group in ipairs(candidate_groups) do
+  local dirname = string.format("%s_d%.3f-%.3f_n%d", group.id, group.min_duration, group.max_duration, #group.members)
+  group.dir = "groups/" .. dirname
+  mkdir_safe(staging .. "/" .. group.dir, checked)
+  local member_rows, pair_rows = {}, {}
+  for index, st in ipairs(group.members) do
+    local filename = string.format("%03d_%s.png", index, safe_stem(st.path))
+    local ok, why = copy_file(st.thumb.path, staging .. "/" .. group.dir .. "/" .. filename, checked)
+    if not ok then die("thumbnail copy failed for " .. st.path .. ": " .. tostring(why)) end
+    local max_dh, max_ah, min_corr = member_pair_summary(group, st)
+    st.group_id = group.id; st.run_thumb_relative = group.dir .. "/" .. filename
+    st.max_pair_dh, st.max_pair_ah, st.min_pair_corr = max_dh, max_ah, min_corr
+    member_rows[#member_rows + 1] = {type = "member", group = group.id, path = st.path, duration = st.duration,
+      dhash = st.feature.dhash, ahash = st.feature.ahash, correlation = min_corr, flags = member_flags(st), thumbnail = filename}
+  end
+  for i = 1, #group.members do
+    for j = i + 1, #group.members do
+      local a, b = group.members[i], group.members[j]
+      local first, second = a.path, b.path
+      if first > second then first, second = second, first end
+      local m = assert(pair_metrics[first .. "\0" .. second])
+      pair_rows[#pair_rows + 1] = {type = "pair", group = group.id, path = a.path, other_path = b.path,
+        duration = math.abs(a.duration - b.duration), dhash = m.dh, ahash = m.ah,
+        correlation = string.format("%.6f", m.corr), flags = "complete-linkage", thumbnail = ""}
+    end
+  end
+  local group_header = {"type", "group", "path", "other_path", "duration_or_delta", "dhash_distance", "ahash_distance", "correlation", "flags", "thumbnail"}
+  local ghrows = {}
+  for _, row in ipairs(member_rows) do ghrows[#ghrows + 1] = {type=row.type, group=row.group, path=row.path, other_path="",
+    duration_or_delta=string.format("%.6f",row.duration), dhash_distance=row.dhash, ahash_distance=row.ahash,
+    correlation=row.correlation, flags=row.flags, thumbnail=row.thumbnail} end
+  for _, row in ipairs(pair_rows) do ghrows[#ghrows + 1] = {type=row.type, group=row.group, path=row.path, other_path=row.other_path,
+    duration_or_delta=string.format("%.6f",row.duration), dhash_distance=row.dhash, ahash_distance=row.ahash,
+    correlation=row.correlation, flags=row.flags, thumbnail=row.thumbnail} end
+  atomic_write(staging .. "/" .. group.dir .. "/group.tsv", tsv(group_header, ghrows), checked)
+end
+
+local report_rows, candidate_rows = {}, {}
+for _, group in ipairs(candidate_groups) do
+  local paths = {}
+  for _, st in ipairs(group.members) do
+    paths[#paths + 1] = esc(st.path)
+    candidate_rows[#candidate_rows + 1] = {group = group.id, path = st.path, size = st.size,
+      duration = string.format("%.6f", st.duration), thumbnail_path = st.run_thumb_relative,
+      thumbnail_source = st.thumb.source, dhash = st.feature.dhash, ahash = st.feature.ahash,
+      max_dhash_distance = st.max_pair_dh, max_ahash_distance = st.max_pair_ah,
+      min_correlation = st.min_pair_corr, flags = member_flags(st)}
+  end
+  report_rows[#report_rows + 1] = {group = group.id, min_duration = string.format("%.6f", group.min_duration),
+    max_duration = string.format("%.6f", group.max_duration), count = #group.members, members = table.concat(paths, "|")}
+end
+atomic_write(staging .. "/report.tsv", tsv({"group", "min_duration", "max_duration", "count", "members"}, report_rows), checked)
+atomic_write(staging .. "/candidates.tsv", tsv({"group", "path", "size", "duration", "thumbnail_path", "thumbnail_source",
+  "dhash", "ahash", "max_dhash_distance", "max_ahash_distance", "min_correlation", "flags"}, candidate_rows), checked)
+atomic_write(staging .. "/issues.tsv", tsv({"kind", "path", "detail"}, issues), checked)
+
+local grouped_count = #candidate_rows
+local missing_count = 0
+for _, item in ipairs(issues) do if item.kind == "missing thumbnail" then missing_count = missing_count + 1 end end
+local run_rows = {
+  {key = "algorithm_version", value = ALGORITHM_VERSION},
+  {key = "feature_version", value = FEATURE_VERSION},
+  {key = "generator_version", value = GENERATOR_VERSION},
+  {key = "mode", value = "candidate groups, not confirmed duplicates"},
+  {key = "root", value = opts.root}, {key = "root_key", value = root_hash},
+  {key = "output", value = opts.output}, {key = "state", value = opts.state},
+  {key = "duration_window", value = opts.duration_window}, {key = "min_duration", value = opts.min_duration},
+  {key = "hard_min_duration", value = HARD_MIN_DURATION}, {key = "max_group_size", value = opts.max_group_size},
+  {key = "dhash_max", value = D_HASH_MAX}, {key = "ahash_max", value = A_HASH_MAX},
+  {key = "correlation_min", value = CORRELATION_MIN}, {key = "low_stddev", value = LOW_STDDEV},
+  {key = "inventory_count", value = #before}, {key = "eligible_count", value = #eligible},
+  {key = "usable_count", value = #usable}, {key = "group_count", value = #candidate_groups},
+  {key = "grouped_video_count", value = grouped_count}, {key = "singleton_count", value = math.max(0, #usable - grouped_count)},
+  {key = "missing_thumbnail_count", value = missing_count}, {key = "issue_count", value = #issues},
+  {key = "created_utc", value = os.date("!%Y-%m-%dT%H:%M:%SZ")},
+}
+atomic_write(staging .. "/run.tsv", tsv({"key", "value"}, run_rows), checked)
+
+local h = {}
+h[#h + 1] = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+h[#h + 1] = "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>vgroup candidate report</title>"
+h[#h + 1] = "<style>body{font:15px system-ui,sans-serif;margin:2rem;background:#fafafa;color:#222}section{background:white;border:1px solid #ddd;padding:1rem;margin:1rem 0}grid{display:grid}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1rem}figure{margin:0;border:1px solid #ddd;padding:.5rem}img{width:100%;height:170px;object-fit:contain;background:#222}code{overflow-wrap:anywhere}.warn{color:#8a4b00}.muted{color:#555}</style></head><body>"
+h[#h + 1] = "<h1>Video duplicate candidates</h1><p><strong>Candidate groups are not proof of duplication.</strong> Absence of a group is not proof of uniqueness. Phase 1 uses one thumbnail and conservative complete-linkage only; there is no multi-frame verification.</p>"
+h[#h + 1] = "<p class=\"muted\">Inventory " .. #before .. "; duration-eligible " .. #eligible .. "; feature-usable " .. #usable .. "; candidate groups " .. #candidate_groups .. "; grouped videos " .. grouped_count .. "; usable singletons " .. math.max(0,#usable-grouped_count) .. "; issues " .. #issues .. ".</p>"
+h[#h + 1] = "<p class=\"warn\">Low-information/zero-hash thumbnails and short or unprobeable videos are excluded. Missing thumbnails are not evidence of uniqueness.</p>"
+for _, group in ipairs(candidate_groups) do
+  h[#h + 1] = "<section><h2>" .. html_escape(group.id) .. " — " .. #group.members .. " candidate members</h2>"
+  h[#h + 1] = "<p>Duration range " .. string.format("%.3f", group.min_duration) .. "–" .. string.format("%.3f", group.max_duration) .. " s; complete-linkage group.</p><div class=\"grid\">"
+  for _, st in ipairs(group.members) do
+    h[#h + 1] = "<figure><img loading=\"lazy\" src=\"" .. html_escape(uri_encode_path(st.run_thumb_relative)) .. "\" alt=\"thumbnail for " .. html_escape(st.path) .. "\">"
+    h[#h + 1] = "<figcaption><strong>" .. html_escape(st.path:match("([^/]+)$")) .. "</strong><br><code>" .. html_escape(st.path) .. "</code><br>"
+    h[#h + 1] = "Duration " .. string.format("%.3f", st.duration) .. " s<br>dHash <code>" .. st.feature.dhash .. "</code>; aHash <code>" .. st.feature.ahash .. "</code><br>"
+    h[#h + 1] = "Worst accepted pair distances: dHash " .. tostring(st.max_pair_dh) .. ", aHash " .. tostring(st.max_pair_ah) .. "; minimum correlation " .. tostring(st.min_pair_corr) .. "<br>"
+    h[#h + 1] = "<span class=\"muted\">" .. html_escape(st.thumb.source) .. "; " .. html_escape(member_flags(st)) .. "</span></figcaption></figure>"
+  end
+  h[#h + 1] = "</div></section>"
+end
+if #candidate_groups == 0 then h[#h + 1] = "<section><p>No candidate groups met all conservative rules.</p></section>" end
+h[#h + 1] = "<section><h2>Review notes</h2><ul><li>All members in a group satisfy the visual rule against every other member.</li>"
+h[#h + 1] = "<li>Thumbnail timestamps and source URI metadata were checked; generated thumbnails were copied into this run.</li>"
+h[#h + 1] = "<li>Reports and thumbnails are review artifacts, not playable original-video links.</li></ul></section>"
+h[#h + 1] = "</body></html>\n"
+atomic_write(staging .. "/report.html", table.concat(h), checked)
+
+-- Last source snapshot: publication is forbidden if any path/size/mtime changed.
+local after = inventory()
+local after_map = {}
+for _, st in ipairs(after) do after_map[st.path] = st.size .. "\0" .. st.mtime_ns end
+local changes = {}
+for _, st in ipairs(before) do
+  if after_map[st.path] ~= tostring(st.size) .. "\0" .. st.mtime_ns then
+    changes[#changes + 1] = st.path
+  end
+end
+for path in pairs(after_map) do
+  local found = false
+  for _, st in ipairs(before) do if st.path == path then found = true; break end end
+  if not found then changes[#changes + 1] = path end
+end
+if #changes > 0 then
+  issue("changed-during-run", table.concat(changes, "|"), "publication aborted")
+  io.stderr:write("vgroup: publication aborted; source inventory changed during run:\n" .. table.concat(changes, "\n") .. "\n")
+  os.exit(1)
+end
+if capture("test -e " .. q(run_path) .. " && printf yes || printf no") == "yes" then
+  die("refusing to replace an existing run: " .. run_path)
+end
+local ok, why = os.rename(staging, run_path)
+if not ok then die("cannot publish run: " .. tostring(why)) end
+atomic_write(opts.output .. "/latest.txt", run_path .. "\n", checked)
+mkdir_safe(duration_dir, checked)
+atomic_write(duration_cache_path, tsv(duration_header, duration_rows), checked)
+mkdir_safe(feature_dir, checked)
+atomic_write(feature_cache_path, tsv(feature_header, feature_rows), checked)
+print("Published candidate run: " .. run_path)
+print("Groups: " .. #candidate_groups .. "; grouped videos: " .. grouped_count .. "; issues: " .. #issues)

@@ -1,0 +1,24 @@
+#!/bin/sh
+# myip - show public IPv4 / IPv6, or detailed info
+# Usage: myip [4|6|info]
+
+set -u
+
+get4() { curl -4 -s --max-time 5 icanhazip.com; }
+get6() { curl -6 -s --max-time 5 icanhazip.com; }
+
+case "${1:-}" in
+  4)    get4 ;;
+  6)    get6 ;;
+  info)
+        ip=$(get4)
+        [ -n "$ip" ] || { echo "could not determine IPv4" >&2; exit 1; }
+        curl -4 -s --max-time 5 "ipinfo.io/$ip"
+        echo
+        ;;
+  *)
+        v4=$(get4); v6=$(get6)
+        echo "IPv4: ${v4:-<none>}"
+        echo "IPv6: ${v6:-<none>}"
+        ;;
+esac

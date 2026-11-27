@@ -1,22 +1,526 @@
-#!/usr/bin/env bash
+#!/usr/bin/env lua5.4
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage: hash-videos DIRECTORY"
-    exit 1
-fi
+local VIDEO_EXTENSIONS = { mp4 = true, m4v = true, mov = true, mkv = true }
 
-DIR="$1"
-OUTPUT="${DIR%/}/video_hashes.txt"
+local function fail(message)
+    io.stderr:write("hash-videos: ", message, "\n")
+    os.exit(1)
+end
 
-find "$DIR" -type f \( \
-    -iname "*.mp4" -o \
-    -iname "*.m4v" -o \
-    -iname "*.mov" -o \
-    -iname "*.mkv" \
-\) -print0 | xargs -0 sha256sum > "$OUTPUT"
+local function usage(stream)
+    stream:write("Usage: hash-videos [--all] DIRECTORY\n",
+                 "       hash-videos --help\n\n",
+                 "By default, incrementally update DIR/video_hashes.txt and\n",
+                 "DIR/video_hashes.cache.  --all hashes every matching file.\n")
+end
 
-echo "Created:"
-echo "  $OUTPUT"
-echo
-echo "Hashes:"
-wc -l < "$OUTPUT"
+local mode, directory = "incremental", nil
+local end_of_options = false
+do
+    local args = { ... }
+    if #args == 1 and (args[1] == "--help" or args[1] == "-h") then
+        usage(io.stdout)
+        os.exit(0)
+    end
+    if args[1] == "--all" then
+        mode = "full"
+        table.remove(args, 1)
+    end
+    if args[1] == "--" then
+        end_of_options = true
+        table.remove(args, 1)
+    end
+    if #args ~= 1 or args[1] == "" or
+            (not end_of_options and args[1]:sub(1, 2) == "--") then
+        usage(io.stderr)
+        os.exit(1)
+    end
+    directory = args[1]
+end
+if directory:find("[\r\n]") then
+    fail("DIRECTORY contains a newline or carriage return; the text manifest cannot represent it")
+end
+
+-- POSIX-shell single quoting.  Lua strings may contain arbitrary pathname bytes.
+local function quote(value)
+    return "'" .. value:gsub("'", "'\\''") .. "'"
+end
+
+local function subprocess_path(path)
+    if path:sub(1, 1) == "-" then
+        return "./" .. path
+    end
+    return path
+end
+
+local function run_command(command)
+    local pipe, message = io.popen(command, "r")
+    if not pipe then
+        fail("cannot run subprocess: " .. tostring(message))
+    end
+    local output, read_error = pipe:read("*a")
+    local closed, reason, status = pipe:close()
+    if not output then
+        fail("cannot read subprocess output: " .. tostring(read_error))
+    end
+    if closed then
+        return output, true, nil
+    end
+    if reason == "exit" then
+        return output, false, "exit status " .. tostring(status)
+    end
+    return output, false, tostring(reason)
+end
+
+local function capture(command)
+    local output, ok, detail = run_command(command)
+    if not ok then
+        fail("subprocess failed (" .. detail .. "): " .. command)
+    end
+    return output
+end
+
+local function try_capture(command)
+    local output, ok = run_command(command)
+    if ok then
+        return output
+    end
+    return nil
+end
+
+local function path_exists(path)
+    return try_capture("find -H -- " .. quote(subprocess_path(path)) ..
+                       " -maxdepth 0 -print -quit 2>/dev/null") ~= nil
+end
+
+local function read_optional(path)
+    local file, message = io.open(path, "rb")
+    if not file then
+        if path_exists(path) then
+            fail("cannot read " .. path .. ": " .. tostring(message))
+        end
+        return nil
+    end
+    local data, read_error = file:read("*a")
+    local closed, close_error = file:close()
+    if not data or not closed then
+        fail("cannot read " .. path .. ": " .. tostring(read_error or close_error))
+    end
+    return data
+end
+
+local function output_path(name)
+    if directory:sub(-1) == "/" then
+        return directory .. name
+    end
+    return directory .. "/" .. name
+end
+
+local manifest_path = output_path("video_hashes.txt")
+local cache_path = output_path("video_hashes.cache")
+
+-- GNU find still parses a leading-dash pathname as an expression.  Prefix such
+-- roots for subprocesses, then remove that prefix from enumerated pathnames.
+local find_directory, find_prefix = directory, nil
+if directory:sub(1, 1) == "-" then
+    find_directory, find_prefix = "./" .. directory, "./"
+end
+-- Follow only a command-line symlink to the root, and require an actual dir.
+local directory_output, directory_ok = run_command(
+    "find -H -- " .. quote(find_directory) .. " -maxdepth 0 -type d -print -quit 2>/dev/null")
+if not directory_ok or directory_output == "" then
+    fail("DIRECTORY is missing or is not a directory: " .. directory)
+end
+
+local function parse_uint(text, limit)
+    limit = limit or math.maxinteger
+    if text == "" or text:find("[^0-9]") then
+        return nil
+    end
+    local value = 0
+    for index = 1, #text do
+        local digit = text:byte(index) - 48
+        if value > (limit - digit) // 10 then
+            return nil
+        end
+        value = value * 10 + digit
+    end
+    return value
+end
+
+local function parse_integer(text)
+    if text == tostring(math.mininteger) then
+        return math.mininteger
+    end
+    local negative = text:sub(1, 1) == "-"
+    local digits = negative and text:sub(2) or text
+    local value = parse_uint(digits)
+    if value == nil then
+        return nil
+    end
+    return negative and -value or value
+end
+
+local function parse_mtime_ns(text)
+    local negative = text:sub(1, 1) == "-"
+    local unsigned = negative and text:sub(2) or text
+    local seconds_text, fraction = unsigned:match("^(%d+)%.(%d+)$")
+    if not seconds_text or fraction == "" then
+        return nil
+    end
+    -- GNU find emits fractional seconds padded to at least nanoseconds.  Reject
+    -- nonzero precision beyond nanoseconds rather than silently rounding it.
+    for index = 10, #fraction do
+        if fraction:byte(index) ~= 48 then
+            return nil
+        end
+    end
+    fraction = fraction .. string.rep("0", 9 - #fraction)
+    local seconds = parse_uint(seconds_text)
+    local nanos = parse_uint(fraction:sub(1, 9), 999999999)
+    if seconds == nil or nanos == nil then
+        return nil
+    end
+    local max_seconds, max_nanos
+    if negative then
+        -- |math.mininteger| is 9223372036854775808, one beyond maxinteger.
+        max_seconds, max_nanos = 9223372036, 854775808
+    else
+        max_seconds, max_nanos = math.maxinteger // 1000000000,
+                                  math.maxinteger % 1000000000
+    end
+    if seconds > max_seconds or (seconds == max_seconds and nanos > max_nanos) then
+        return nil
+    end
+    if negative and seconds == 9223372036 and nanos == 854775808 then
+        return math.mininteger
+    end
+    local magnitude = seconds * 1000000000 + nanos
+    if negative then
+        return -magnitude
+    end
+    return magnitude
+end
+
+local function is_video(path)
+    local extension = path:match("%.([^./]*)$")
+    return extension ~= nil and VIDEO_EXTENSIONS[string.lower(extension)] == true
+end
+
+-- Use the same -H root handling for both snapshots: follow only a command-line
+-- symlink, never nested symlinks.  NUL delimiters preserve arbitrary names.
+local find_command = "find -H -- " .. quote(find_directory) ..
+    " -type f -printf '%s\\0%T@\\0%p\\0'"
+local function enumerate_files()
+    local find_output = capture(find_command)
+    local fields = {}
+    for field in find_output:gmatch("([^%z]*)%z") do
+        fields[#fields + 1] = field
+    end
+    if fields[#fields] == "" then
+        fields[#fields] = nil
+    end
+    if #fields % 3 ~= 0 then
+        fail("find returned malformed file metadata")
+    end
+
+    local files = {}
+    for index = 1, #fields, 3 do
+        local size = parse_uint(fields[index])
+        local mtime_ns = parse_mtime_ns(fields[index + 1])
+        local path = fields[index + 2]
+        if find_prefix ~= nil then
+            if path:sub(1, #find_prefix) ~= find_prefix then
+                fail("find returned a path outside DIRECTORY")
+            end
+            path = path:sub(#find_prefix + 1)
+        end
+        if size == nil or mtime_ns == nil or path == "" or path:find("%z") then
+            fail("find returned invalid file metadata")
+        end
+        files[path] = { size = size, mtime_ns = mtime_ns }
+    end
+    return files
+end
+
+local current, current_set = {}, {}
+for path, metadata in pairs(enumerate_files()) do
+    if is_video(path) then
+        if path:find("[\r\n]") then
+            fail("filename contains a newline or carriage return; the text manifest cannot represent it: " ..
+                     (path:gsub("[\r\n]", "?")))
+        end
+        current[#current + 1] = { path = path, size = metadata.size,
+                                  mtime_ns = metadata.mtime_ns }
+        current_set[path] = true
+    end
+end
+table.sort(current, function(left, right) return left.path < right.path end)
+
+local function validate_final_snapshot()
+    local final_files = enumerate_files()
+    for _, file in ipairs(current) do
+        local final = final_files[file.path]
+        -- Membership in this snapshot also proves the path is still a regular
+        -- file; find -H does not follow a nested symlink swapped into its place.
+        if final == nil or final.size ~= file.size or final.mtime_ns ~= file.mtime_ns then
+            fail("video file changed, disappeared, or became a symlink during processing: " ..
+                     (file.path:gsub("[\r\n]", "?")))
+        end
+    end
+    for path in pairs(final_files) do
+        if is_video(path) and current_set[path] == nil then
+            fail("video file appeared during processing: " .. (path:gsub("[\r\n]", "?")))
+        end
+    end
+end
+
+local function data_lines(data, label)
+    if data == "" then
+        return {}
+    end
+    if data:sub(-1) ~= "\n" then
+        fail(label .. " is malformed: missing final newline")
+    end
+    local lines = {}
+    for line in data:gmatch("(.-)\n") do
+        lines[#lines + 1] = line
+    end
+    return lines
+end
+
+local function parse_cache(data)
+    local lines = data_lines(data, "cache")
+    if #lines < 2 or lines[1] ~= "version\t1" or lines[2] ~= "kind\tvideos" then
+        fail("cache is corrupt: invalid version or kind; rerun with --all")
+    end
+    local entries = {}
+    for index = 3, #lines do
+        local size_text, mtime_text, hash, encoded_path =
+            lines[index]:match("^entry\t([^\t]*)\t([^\t]*)\t([^\t]*)\t([^\t]*)$")
+        if not size_text or not mtime_text or not hash or not encoded_path then
+            fail("cache is corrupt: malformed entry on line " .. index .. "; rerun with --all")
+        end
+        local size = parse_uint(size_text)
+        local mtime_ns = parse_integer(mtime_text)
+        if size == nil or mtime_ns == nil or #hash ~= 64 or hash:find("[^0-9a-f]") then
+            fail("cache is corrupt: invalid size, mtime, or hash on line " .. index .. "; rerun with --all")
+        end
+        if #encoded_path == 0 or #encoded_path % 2 ~= 0 or
+                encoded_path:find("[^0-9a-f]") then
+            fail("cache is corrupt: invalid hex path on line " .. index .. "; rerun with --all")
+        end
+        local decoded_count = 0
+        local path = encoded_path:gsub("%x%x", function(pair)
+            decoded_count = decoded_count + 1
+            return string.char(tonumber(pair, 16))
+        end)
+        if decoded_count * 2 ~= #encoded_path or path:find("[\r\n%z]") then
+            fail("cache is corrupt: invalid hex path on line " .. index .. "; rerun with --all")
+        end
+        if entries[path] then
+            fail("cache is corrupt: duplicate path on line " .. index .. "; rerun with --all")
+        end
+        entries[path] = { size = size, mtime_ns = mtime_ns,
+                          sha256 = string.lower(hash) }
+    end
+    return entries
+end
+
+local function parse_manifest(data)
+    local lines = data_lines(data, "legacy manifest")
+    local entries = {}
+    for index, line in ipairs(lines) do
+        local hash, path = line:sub(1, 64), line:sub(67)
+        if #hash ~= 64 or hash:find("[^0-9a-f]") or line:sub(65, 66) ~= "  " or
+                path == "" or path:find("[\r\n%z]") then
+            fail("legacy manifest is malformed on line " .. index .. "; rerun with --all")
+        end
+        if entries[path] ~= nil then
+            fail("legacy manifest is malformed: duplicate path on line " .. index .. "; rerun with --all")
+        end
+        entries[path] = string.lower(hash)
+    end
+    return entries
+end
+
+local function inspect_regular_file(path)
+    local output = try_capture("find -P -- " .. quote(subprocess_path(path)) ..
+        " -maxdepth 0 -printf '%y\\0%s\\0%T@\\0' 2>/dev/null")
+    if output == nil then
+        return nil
+    end
+    local kind, size_text, mtime_text = output:match("^([^%z]*)%z([^%z]*)%z([^%z]*)%z$")
+    if kind ~= "f" then
+        return nil
+    end
+    local size = parse_uint(size_text)
+    local mtime_ns = parse_mtime_ns(mtime_text)
+    if size == nil or mtime_ns == nil then
+        fail("find returned invalid metadata while checking: " .. path)
+    end
+    return { size = size, mtime_ns = mtime_ns }
+end
+
+local function ensure_unchanged(file, phase)
+    local metadata = inspect_regular_file(file.path)
+    if metadata == nil or metadata.size ~= file.size or metadata.mtime_ns ~= file.mtime_ns then
+        fail("file changed or is no longer a regular file " .. phase .. ": " .. file.path)
+    end
+end
+
+local function legacy_manifest_mtime(path)
+    local output = capture("find -H -- " .. quote(subprocess_path(path)) ..
+                           " -maxdepth 0 -printf '%T@\\0'")
+    local value = output:match("^([^%z]*)%z")
+    local mtime = value and parse_mtime_ns(value)
+    if mtime == nil then
+        fail("cannot determine legacy manifest mtime")
+    end
+    return mtime
+end
+
+local function hash_file(file)
+    local path = file.path
+    local output, ok, detail = run_command("sha256sum --zero -- " .. quote(path))
+    if not ok then
+        local metadata = inspect_regular_file(path)
+        if metadata == nil or metadata.size ~= file.size or metadata.mtime_ns ~= file.mtime_ns then
+            fail("file changed or is no longer a regular file while hashing: " .. path)
+        end
+        fail("sha256sum failed (" .. detail .. ") for: " .. path)
+    end
+    if #output < 67 or output:sub(-1) ~= "\0" or output:sub(65, 66) ~= "  " or
+            output:sub(67, -2) ~= path then
+        fail("sha256sum returned malformed output for: " .. path)
+    end
+    local hash = output:sub(1, 64)
+    if #hash ~= 64 or hash:find("[^0-9a-f]") then
+        fail("sha256sum returned an invalid hash for: " .. path)
+    end
+    return hash
+end
+
+local function hex_encode(path)
+    return (path:gsub(".", function(character)
+        return string.format("%02x", string.byte(character))
+    end))
+end
+
+local cache_entries, legacy_entries, legacy_mtime = {}, nil, nil
+local old_paths = {}
+if mode == "incremental" then
+    local cache_data = read_optional(cache_path)
+    local manifest_data = read_optional(manifest_path)
+    if cache_data ~= nil then
+        cache_entries = parse_cache(cache_data)
+        for path in pairs(cache_entries) do old_paths[path] = true end
+    end
+    -- Validate every existing manifest, even when the cache is authoritative.
+    -- Only a missing cache may migrate trusted hashes from that manifest.
+    if manifest_data ~= nil then
+        legacy_entries = parse_manifest(manifest_data)
+        if cache_data == nil then
+            legacy_mtime = legacy_manifest_mtime(manifest_path)
+            for path in pairs(legacy_entries) do old_paths[path] = true end
+        end
+    end
+end
+local hashed, reused, removed = 0, 0, 0
+local results = {}
+
+for _, file in ipairs(current) do
+    local hash = nil
+    if mode == "incremental" then
+        local cached = cache_entries[file.path]
+        if cached and cached.size == file.size and cached.mtime_ns == file.mtime_ns then
+            hash = cached.sha256
+            reused = reused + 1
+        elseif legacy_entries and legacy_entries[file.path] and
+                legacy_mtime ~= nil and file.mtime_ns <= legacy_mtime then
+            hash = legacy_entries[file.path]
+            reused = reused + 1
+        end
+    end
+    if hash == nil then
+        ensure_unchanged(file, "before hashing")
+        hash = hash_file(file)
+        ensure_unchanged(file, "after hashing")
+        hashed = hashed + 1
+    end
+    results[#results + 1] = { path = file.path, size = file.size,
+                              mtime_ns = file.mtime_ns, sha256 = hash }
+end
+
+for path in pairs(old_paths) do
+    if current_set[path] == nil then
+        removed = removed + 1
+    end
+end
+
+local manifest_lines, cache_lines = {}, { "version\t1", "kind\tvideos" }
+for _, entry in ipairs(results) do
+    manifest_lines[#manifest_lines + 1] = entry.sha256 .. "  " .. entry.path
+    cache_lines[#cache_lines + 1] = "entry\t" .. entry.size .. "\t" .. entry.mtime_ns ..
+        "\t" .. entry.sha256 .. "\t" .. hex_encode(entry.path)
+end
+local manifest_data = #manifest_lines > 0 and table.concat(manifest_lines, "\n") .. "\n" or ""
+local cache_data = table.concat(cache_lines, "\n") .. "\n"
+
+local function existing_output_mode(path)
+    local output = try_capture("find -H -- " .. quote(subprocess_path(path)) ..
+        " -maxdepth 0 -printf '%m\\0' 2>/dev/null")
+    if output == nil then
+        return nil
+    end
+    return output:match("^(%d+)%z$")
+end
+
+local function write_atomic(path, template, data, default_mode)
+    local mode = existing_output_mode(path) or default_mode
+    local temporary = capture("mktemp -- " .. quote(template))
+    if temporary:sub(-1) ~= "\n" then
+        os.remove(temporary)
+        fail("mktemp returned malformed output")
+    end
+    temporary = temporary:sub(1, -2)
+    local file, message = io.open(temporary, "wb")
+    if not file then
+        os.remove(temporary)
+        fail("cannot create temporary output for " .. path .. ": " .. tostring(message))
+    end
+    local written, write_error = file:write(data)
+    local closed, close_error = file:close()
+    if not written or not closed then
+        os.remove(temporary)
+        fail("cannot write temporary output for " .. path .. ": " ..
+                 tostring(write_error or close_error))
+    end
+    local chmod_ok, chmod_detail = run_command(
+        "chmod -- " .. quote(mode) .. " " .. quote(temporary))
+    if not chmod_ok then
+        os.remove(temporary)
+        fail("cannot set output permissions (" .. chmod_detail .. "): " .. path)
+    end
+    if not os.rename(temporary, path) then
+        os.remove(temporary)
+        fail("cannot rename temporary output to " .. path)
+    end
+end
+
+-- One final enumeration covers reused as well as hashed entries.  No output is
+-- staged until the complete candidate set and all metadata still match.
+validate_final_snapshot()
+
+-- Cache first: after an interruption, a valid cache can always regenerate a
+-- stale manifest on the next incremental run.
+write_atomic(cache_path, output_path(".video_hashes.cache.tmp.XXXXXX"), cache_data, "0600")
+write_atomic(manifest_path, output_path(".video_hashes.txt.tmp.XXXXXX"), manifest_data, "0644")
+
+io.write("Mode: ", mode, "\n",
+         "Scanned: ", #current, "\n",
+         "Hashed: ", hashed, "\n",
+         "Reused: ", reused, "\n",
+         "Removed: ", removed, "\n",
+         "Manifest: ", manifest_path, "\n",
+         "Cache: ", cache_path, "\n")
